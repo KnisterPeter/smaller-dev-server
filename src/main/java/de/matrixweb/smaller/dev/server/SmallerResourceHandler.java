@@ -3,8 +3,22 @@ package de.matrixweb.smaller.dev.server;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -40,6 +54,60 @@ public class SmallerResourceHandler {
 
   private final Pipeline pipeline;
 
+  private WatchService watchService;
+
+  private Map<WatchKey, Path> watches;
+
+  private boolean runWatchdog = true;
+
+  private final Runnable watchdog = new Runnable() {
+
+    @SuppressWarnings("unchecked")
+    private <T> WatchEvent<T> cast(final WatchEvent<?> event) {
+      return (WatchEvent<T>) event;
+    }
+
+    @Override
+    public void run() {
+      while (SmallerResourceHandler.this.runWatchdog) {
+        WatchKey key;
+        try {
+          key = SmallerResourceHandler.this.watchService.take();
+        } catch (InterruptedException e) {
+          continue;
+        }
+        boolean requireProcessResources = false;
+        Path path = SmallerResourceHandler.this.watches.get(key);
+        for (WatchEvent<?> event : key.pollEvents()) {
+          WatchEvent.Kind<?> kind = event.kind();
+          if (kind == StandardWatchEventKinds.OVERFLOW) {
+            continue;
+          }
+          WatchEvent<Path> ev = cast(event);
+          Path name = ev.context();
+          Path child = path.resolve(name);
+          requireProcessResources = true;
+          if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+            try {
+              if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
+                watchRecursive(child);
+              }
+            } catch (IOException x) {
+              // ignore to keep sample readbale
+            }
+          }
+        }
+        boolean valid = key.reset();
+        if (!valid) {
+          SmallerResourceHandler.this.watches.remove(key);
+        }
+        if (requireProcessResources) {
+          smallerResources();
+        }
+      }
+    }
+  };
+
   /**
    * @param config
    * @throws IOException
@@ -55,8 +123,36 @@ public class SmallerResourceHandler {
   }
 
   private final void setup() throws IOException {
-    // TODO: Watch doc-root folders recursivly for changes and cache process
-    // results
+    prepareFileWatches();
+    prepareVfs();
+    smallerResources();
+  }
+
+  private final void prepareFileWatches() throws IOException {
+    this.watchService = FileSystems.getDefault().newWatchService();
+    this.watches = new HashMap<WatchKey, Path>();
+    for (File root : this.config.getDocumentRoots()) {
+      watchRecursive(Paths.get(root.getPath()));
+    }
+    Thread thread = new Thread(this.watchdog);
+    thread.setDaemon(true);
+    thread.start();
+  }
+
+  private void watchRecursive(final Path dir) throws IOException {
+    Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+      @Override
+      public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
+        WatchKey watchKey = dir.register(SmallerResourceHandler.this.watchService,
+            StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY,
+            StandardWatchEventKinds.ENTRY_DELETE);
+        SmallerResourceHandler.this.watches.put(watchKey, dir);
+        return FileVisitResult.CONTINUE;
+      }
+    });
+  }
+
+  private final void prepareVfs() throws IOException {
     List<WrappedSystem> mergedRoot = new ArrayList<>();
     for (final File root : this.config.getDocumentRoots()) {
       mergedRoot.add(new JavaFile(root));
@@ -76,16 +172,17 @@ public class SmallerResourceHandler {
    * @throws IOException
    */
   public void process(final HttpServletResponse response, final String uri) throws IOException {
-    smallerResources();
     final PrintWriter writer = response.getWriter();
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
     writer.close();
   }
 
   /**
-   * 
+   * @throws IOException
    */
-  public void dispose() {
+  public void dispose() throws IOException {
+    this.runWatchdog = false;
+    this.watchService.close();
     if (this.processorFactory != null) {
       this.processorFactory.dispose();
     }

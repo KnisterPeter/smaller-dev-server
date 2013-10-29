@@ -1,5 +1,6 @@
 package de.matrixweb.smaller.dev.server;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.Locale;
@@ -39,11 +40,9 @@ public class Main {
       logger.setLevel(Level.DEBUG);
     }
 
-    final SmallerResourceHandler resourceHandler = new SmallerResourceHandler(
-        config);
+    final SmallerResourceHandler resourceHandler = new SmallerResourceHandler(config);
     final Servlet servlet = new Servlet(config, resourceHandler);
-    final Server server = new Server(InetSocketAddress.createUnresolved(
-        config.getHost(), config.getPort()));
+    final Server server = new Server(InetSocketAddress.createUnresolved(config.getHost(), config.getPort()));
     final ServletHandler handler = new ServletHandler();
     handler.addServletWithMapping(new ServletHolder(servlet), "/");
     server.setHandler(handler);
@@ -53,7 +52,11 @@ public class Main {
       @Override
       public void run() {
         if (resourceHandler != null) {
-          resourceHandler.dispose();
+          try {
+            resourceHandler.dispose();
+          } catch (IOException e) {
+            logger.error("Failed to shutdown watchdog", e);
+          }
         }
         if (server != null) {
           try {

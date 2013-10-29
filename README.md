@@ -1,5 +1,13 @@
+Smaller Development Server
+==========================
+
+Summary
+-------
 The smaller-dev-server acts as proxy to some web application but intercepts 
 configured requests to process javascript, css and images.
+
+Configuration / Commandline Parameter
+-------------------------------------
 
     java -jar smaller-dev-server-0.0.1-SNAPSHOT.jar --proxyhost localhost 
       --proxyport 3000 --processors "coffeeScript,browserify,lessjs" 
@@ -17,3 +25,10 @@ configured requests to process javascript, css and images.
     -i (--in) VAL             : The main input files if any
     -p (--processors) VAL     : To processors to apply to intercepted requests
     -v (--verbose)            : To log debug info
+
+Credits
+-------
+
+Thanks to [SinnerSchrader](http://www.sinnerschrader.com/) for their support
+and the time to work on this project.
+

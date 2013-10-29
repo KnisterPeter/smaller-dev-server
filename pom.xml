@@ -109,15 +109,7 @@
         <configuration>
           <source>1.7</source>
           <target>1.7</target>
-          <compilerId>eclipse</compilerId>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-compiler-eclipse</artifactId>
-            <version>1.9.2</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

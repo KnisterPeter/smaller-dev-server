@@ -6,6 +6,8 @@ Summary
 The smaller-dev-server acts as proxy to some web application but intercepts 
 configured requests to process javascript, css and images.
 
+![](http://knisterpeter.github.io/smaller-dev-server/Smaller%20Development%20Server%20Architecture%20Chart.svg)
+
 Configuration / Commandline Parameter
 -------------------------------------
 

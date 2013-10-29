@@ -3,6 +3,8 @@ package de.matrixweb.smaller.dev.server;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -18,6 +20,8 @@ import de.matrixweb.smaller.resource.vfs.VFS;
 import de.matrixweb.smaller.resource.vfs.VFSResourceResolver;
 import de.matrixweb.smaller.resource.vfs.VFSUtils;
 import de.matrixweb.smaller.resource.vfs.wrapped.JavaFile;
+import de.matrixweb.smaller.resource.vfs.wrapped.MergingVFS;
+import de.matrixweb.smaller.resource.vfs.wrapped.WrappedSystem;
 
 /**
  * @author markusw
@@ -53,14 +57,17 @@ public class SmallerResourceHandler {
   private final void setup() throws IOException {
     // TODO: Watch doc-root folders recursivly for changes and cache process
     // results
-    // TODO: allow multiple doc-roots (aka merge-mounts)
+    List<WrappedSystem> mergedRoot = new ArrayList<>();
     for (final File root : this.config.getDocumentRoots()) {
-      this.vfs.mount(this.vfs.find("/"), new JavaFile(root));
-      this.vfs.stack();
+      mergedRoot.add(new JavaFile(root));
     }
-    this.task = new Task(this.config.getProcessors(), StringUtils.join(
-        this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
-        ','));
+    this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
+    this.task = new Task(this.config.getProcessors(), StringUtils.join(this.config.getIn(), ','), StringUtils.join(
+        this.config.getProcess(), ','));
+  }
+
+  private void smallerResources() {
+    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver, this.task);
   }
 
   /**
@@ -68,10 +75,8 @@ public class SmallerResourceHandler {
    * @param uri
    * @throws IOException
    */
-  public void process(final HttpServletResponse response, final String uri)
-      throws IOException {
-    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
-        this.task);
+  public void process(final HttpServletResponse response, final String uri) throws IOException {
+    smallerResources();
     final PrintWriter writer = response.getWriter();
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
     writer.close();

@@ -7,6 +7,10 @@ The smaller-dev-server acts as proxy to some web application but intercepts
 configured requests to process javascript, css and images. It 
 uses [Smaller](https://github.com/KnisterPeter/Smaller) to utilize all the tools to process resources.
 
+This enables frontend developers to build upon all the cool frontend dev tools
+while don't conflict with the server-side development build-tools. 
+Also allow prototype development with easy reuse in development later on without change in technology.
+
 ![](http://knisterpeter.github.io/smaller-dev-server/Smaller%20Development%20Server%20Architecture%20Chart.svg)
 
 Configuration / Commandline Parameter

@@ -40,6 +40,9 @@ public class Config {
   @Option(name = "-d", aliases = { "--document-root" }, multiValued = true, usage = "The folders to scan for resources")
   private List<File> documentRoots;
 
+  @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use.\nCurrently raw is supported")
+  private String templateEngine;
+
   /**
    * @return the help
    */
@@ -188,6 +191,21 @@ public class Config {
    */
   public void setDocumentRoots(final List<File> documentRoots) {
     this.documentRoots = documentRoots;
+  }
+
+  /**
+   * @return the templateEngine
+   */
+  public String getTemplateEngine() {
+    return this.templateEngine;
+  }
+
+  /**
+   * @param templateEngine
+   *          the templateEngine to set
+   */
+  public void setTemplateEngine(final String templateEngine) {
+    this.templateEngine = templateEngine;
   }
 
 }

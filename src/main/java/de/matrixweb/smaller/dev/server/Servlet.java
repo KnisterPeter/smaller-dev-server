@@ -111,7 +111,11 @@ public class Servlet implements javax.servlet.Servlet {
       // TODO: Allow wildcard uris
       this.resourceHandler.process(response, uri);
     } else {
-      handleProxyRequest(request, response, uri);
+      try {
+        handleProxyRequest(request, response, uri);
+      } catch (final IOException e) {
+        this.resourceHandler.renderTemplate(response, uri);
+      }
     }
   }
 

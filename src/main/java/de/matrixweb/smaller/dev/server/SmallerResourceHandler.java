@@ -50,7 +50,7 @@ public class SmallerResourceHandler {
 
   private final ResourceResolver resolver;
 
-  private Task task;
+  private final Task task;
 
   private final Pipeline pipeline;
 
@@ -73,31 +73,30 @@ public class SmallerResourceHandler {
         WatchKey key;
         try {
           key = SmallerResourceHandler.this.watchService.take();
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
           continue;
         }
         boolean requireProcessResources = false;
-        Path path = SmallerResourceHandler.this.watches.get(key);
-        for (WatchEvent<?> event : key.pollEvents()) {
-          WatchEvent.Kind<?> kind = event.kind();
+        final Path path = SmallerResourceHandler.this.watches.get(key);
+        for (final WatchEvent<?> event : key.pollEvents()) {
+          final WatchEvent.Kind<?> kind = event.kind();
           if (kind == StandardWatchEventKinds.OVERFLOW) {
             continue;
           }
-          WatchEvent<Path> ev = cast(event);
-          Path name = ev.context();
-          Path child = path.resolve(name);
           requireProcessResources = true;
           if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+            final WatchEvent<Path> ev = cast(event);
+            final Path child = path.resolve(ev.context());
             try {
               if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
                 watchRecursive(child);
               }
-            } catch (IOException x) {
-              // ignore to keep sample readbale
+            } catch (final IOException x) {
+              // Ignore this one
             }
           }
         }
-        boolean valid = key.reset();
+        final boolean valid = key.reset();
         if (!valid) {
           SmallerResourceHandler.this.watches.remove(key);
         }
@@ -119,22 +118,21 @@ public class SmallerResourceHandler {
     this.resolver = new VFSResourceResolver(this.vfs);
     this.pipeline = new Pipeline(this.processorFactory);
 
-    setup();
-  }
-
-  private final void setup() throws IOException {
     prepareFileWatches();
     prepareVfs();
+    this.task = new Task(this.config.getProcessors(), StringUtils.join(
+        this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
+        ','));
     smallerResources();
   }
 
   private final void prepareFileWatches() throws IOException {
     this.watchService = FileSystems.getDefault().newWatchService();
     this.watches = new HashMap<WatchKey, Path>();
-    for (File root : this.config.getDocumentRoots()) {
+    for (final File root : this.config.getDocumentRoots()) {
       watchRecursive(Paths.get(root.getPath()));
     }
-    Thread thread = new Thread(this.watchdog);
+    final Thread thread = new Thread(this.watchdog);
     thread.setDaemon(true);
     thread.start();
   }
@@ -142,9 +140,12 @@ public class SmallerResourceHandler {
   private void watchRecursive(final Path dir) throws IOException {
     Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
       @Override
-      public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
-        WatchKey watchKey = dir.register(SmallerResourceHandler.this.watchService,
-            StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY,
+      public FileVisitResult preVisitDirectory(final Path dir,
+          final BasicFileAttributes attrs) throws IOException {
+        final WatchKey watchKey = dir.register(
+            SmallerResourceHandler.this.watchService,
+            StandardWatchEventKinds.ENTRY_CREATE,
+            StandardWatchEventKinds.ENTRY_MODIFY,
             StandardWatchEventKinds.ENTRY_DELETE);
         SmallerResourceHandler.this.watches.put(watchKey, dir);
         return FileVisitResult.CONTINUE;
@@ -153,17 +154,16 @@ public class SmallerResourceHandler {
   }
 
   private final void prepareVfs() throws IOException {
-    List<WrappedSystem> mergedRoot = new ArrayList<>();
+    final List<WrappedSystem> mergedRoot = new ArrayList<>();
     for (final File root : this.config.getDocumentRoots()) {
       mergedRoot.add(new JavaFile(root));
     }
     this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
-    this.task = new Task(this.config.getProcessors(), StringUtils.join(this.config.getIn(), ','), StringUtils.join(
-        this.config.getProcess(), ','));
   }
 
   private void smallerResources() {
-    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver, this.task);
+    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
+        this.task);
   }
 
   /**
@@ -171,7 +171,8 @@ public class SmallerResourceHandler {
    * @param uri
    * @throws IOException
    */
-  public void process(final HttpServletResponse response, final String uri) throws IOException {
+  public void process(final HttpServletResponse response, final String uri)
+      throws IOException {
     final PrintWriter writer = response.getWriter();
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
     writer.close();

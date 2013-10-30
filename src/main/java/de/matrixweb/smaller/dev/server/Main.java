@@ -40,9 +40,11 @@ public class Main {
       logger.setLevel(Level.DEBUG);
     }
 
-    final SmallerResourceHandler resourceHandler = new SmallerResourceHandler(config);
+    final SmallerResourceHandler resourceHandler = new SmallerResourceHandler(
+        config);
     final Servlet servlet = new Servlet(config, resourceHandler);
-    final Server server = new Server(InetSocketAddress.createUnresolved(config.getHost(), config.getPort()));
+    final Server server = new Server(InetSocketAddress.createUnresolved(
+        config.getHost(), config.getPort()));
     final ServletHandler handler = new ServletHandler();
     handler.addServletWithMapping(new ServletHolder(servlet), "/");
     server.setHandler(handler);
@@ -54,7 +56,7 @@ public class Main {
         if (resourceHandler != null) {
           try {
             resourceHandler.dispose();
-          } catch (IOException e) {
+          } catch (final IOException e) {
             logger.error("Failed to shutdown watchdog", e);
           }
         }
@@ -74,6 +76,7 @@ public class Main {
   private Config parseArgs(final String... args) {
     final Config config = new Config();
     final CmdLineParser parser = new CmdLineParser(config);
+    parser.setUsageWidth(80);
     try {
       parser.parseArgument(args);
       if (config.isHelp()) {

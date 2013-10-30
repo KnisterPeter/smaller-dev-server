@@ -42,8 +42,8 @@ public class Config {
 
   @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use. Could be one of:\n"
       + "  raw      - Just deliveres raw html files\n"
-      + "  soy      - Uses google closure templates to produce the output\n"
-      + "  velocity - Uses apache velocity to produce the output")
+      + "  soy      - Google Closure templates\n"
+      + "  velocity - Apache Velocity templates")
   private String templateEngine;
 
   /**

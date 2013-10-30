@@ -32,8 +32,10 @@ Configuration / Commandline Parameter
     -h (--help)                : This screen
     -i (--in) VAL              : The main input files if any
     -p (--processors) VAL      : To processors to apply to intercepted requests
-    -t (--template-engine) VAL : The template engine to use.
-                                 Currently raw is supported
+    -t (--template-engine) VAL : The template engine to use. Could be one of:
+                                   raw      - Just deliveres raw html files
+                                   soy      - Google Closure templates
+                                   velocity - Apache Velocity templates
     -v (--verbose)             : To log debug info
 
 Credits

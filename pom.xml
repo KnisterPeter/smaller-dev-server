@@ -54,6 +54,14 @@
           <artifactId>jetty-servlet</artifactId>
           <groupId>org.eclipse.jetty</groupId>
         </exclusion>
+        <exclusion>
+          <artifactId>slf4j-api</artifactId>
+          <groupId>org.slf4j</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>commons-lang3</artifactId>
+          <groupId>org.apache.commons</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -90,6 +98,17 @@
       <groupId>org.apache.velocity</groupId>
       <artifactId>velocity</artifactId>
       <version>1.7</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jknack</groupId>
+      <artifactId>handlebars</artifactId>
+      <version>1.1.2</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>rhino</artifactId>
+          <groupId>org.mozilla</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 

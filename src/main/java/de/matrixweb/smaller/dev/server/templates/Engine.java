@@ -15,7 +15,9 @@ public enum Engine {
   /** */
   SOY(SoyTemplates.class),
   /** */
-  VELOCITY(VelocityTemplates.class);
+  VELOCITY(VelocityTemplates.class),
+  /** */
+  HANDLEBARS(HandlebarsTemplates.class);
 
   private Class<? extends TemplateEngine> clazz;
 

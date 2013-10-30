@@ -41,9 +41,10 @@ public class Config {
   private List<File> documentRoots;
 
   @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use. Could be one of:\n"
-      + "  raw      - Just deliveres raw html files\n"
-      + "  soy      - Google Closure templates\n"
-      + "  velocity - Apache Velocity templates")
+      + "  raw        - Just deliveres raw html files\n"
+      + "  soy        - Google Closure templates\n"
+      + "  velocity   - Apache Velocity templates\n"
+      + "  handlebars - Handlebars templates")
   private String templateEngine;
 
   /**

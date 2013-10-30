@@ -1,0 +1,13 @@
+#set( $title = "Insert title here" )
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>$title</title>
+<link href="main.css" media="all" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="content"></div>
+<script type="text/javascript" src="main.js"></script>
+</body>
+</html>

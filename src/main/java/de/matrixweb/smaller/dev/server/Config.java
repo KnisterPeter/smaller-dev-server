@@ -40,7 +40,10 @@ public class Config {
   @Option(name = "-d", aliases = { "--document-root" }, multiValued = true, usage = "The folders to scan for resources")
   private List<File> documentRoots;
 
-  @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use.\nCurrently raw is supported")
+  @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use. Could be one of:\n"
+      + "  raw      - Just deliveres raw html files\n"
+      + "  soy      - Uses google closure templates to produce the output\n"
+      + "  velocity - Uses apache velocity to produce the output")
   private String templateEngine;
 
   /**

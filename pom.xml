@@ -56,11 +56,6 @@
         </exclusion>
       </exclusions>
     </dependency>
-<!--     <dependency> -->
-<!--       <groupId>org.eclipse.xtend</groupId> -->
-<!--       <artifactId>org.eclipse.xtend.lib</artifactId> -->
-<!--       <version>2.4.3</version> -->
-<!--     </dependency> -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
@@ -86,22 +81,20 @@
       <artifactId>jsoup</artifactId>
       <version>1.7.2</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.template</groupId>
+      <artifactId>soy</artifactId>
+      <version>2012-12-21</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.velocity</groupId>
+      <artifactId>velocity</artifactId>
+      <version>1.7</version>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-<!--       <plugin> -->
-<!--         <groupId>org.eclipse.xtend</groupId> -->
-<!--         <artifactId>xtend-maven-plugin</artifactId> -->
-<!--         <version>2.4.3</version> -->
-<!--         <executions> -->
-<!--           <execution> -->
-<!--             <goals> -->
-<!--               <goal>compile</goal> -->
-<!--             </goals> -->
-<!--           </execution> -->
-<!--         </executions> -->
-<!--       </plugin> -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -123,7 +116,8 @@
             </goals>
             <configuration>
               <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                <transformer
+                  implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>META-INF/services/org/apache/camel/TypeConverter</resource>
                 </transformer>
               </transformers>

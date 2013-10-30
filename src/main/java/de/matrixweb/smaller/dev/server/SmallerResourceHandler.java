@@ -61,8 +61,8 @@ public class SmallerResourceHandler {
     this.task = new Task(this.config.getProcessors(), StringUtils.join(
         this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
         ','));
-    this.templateEngine = Engine.get(this.config.getTemplateEngine()).create();
-    this.templateEngine.setVfs(this.vfs);
+    this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
+        this.vfs);
 
     smallerResources();
   }

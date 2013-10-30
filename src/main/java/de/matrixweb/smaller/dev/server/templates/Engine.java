@@ -1,6 +1,7 @@
 package de.matrixweb.smaller.dev.server.templates;
 
 import de.matrixweb.smaller.common.SmallerException;
+import de.matrixweb.smaller.resource.vfs.VFS;
 
 /**
  * @author markusw
@@ -10,7 +11,11 @@ public enum Engine {
   /** */
   NULL(NullTemplates.class),
   /** */
-  RAW(RawTemplates.class);
+  RAW(RawTemplates.class),
+  /** */
+  SOY(SoyTemplates.class),
+  /** */
+  VELOCITY(VelocityTemplates.class);
 
   private Class<? extends TemplateEngine> clazz;
 
@@ -22,11 +27,15 @@ public enum Engine {
   }
 
   /**
-   * @return
+   * @param vfs
+   * @return Returns a new crated instance of the selected
+   *         {@link TemplateEngine}
    */
-  public TemplateEngine create() {
+  public TemplateEngine create(final VFS vfs) {
     try {
-      return this.clazz.newInstance();
+      final TemplateEngine templateEngine = this.clazz.newInstance();
+      templateEngine.setVfs(vfs);
+      return templateEngine;
     } catch (InstantiationException | IllegalAccessException e) {
       throw new SmallerException("Failed to create template engine", e);
     }
@@ -34,7 +43,7 @@ public enum Engine {
 
   /**
    * @param name
-   * @return
+   * @return Returns the selected {@link Engine} factory
    */
   public static Engine get(String name) {
     if (name == null) {

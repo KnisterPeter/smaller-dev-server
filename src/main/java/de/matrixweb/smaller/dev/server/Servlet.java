@@ -107,7 +107,8 @@ public class Servlet implements javax.servlet.Servlet {
   private void handleHttpRequest(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     final String uri = request.getRequestURI();
-    if (this.config.getProcess().contains(uri)) {
+    if (this.config.getProcess() != null
+        && this.config.getProcess().contains(uri)) {
       // TODO: Allow wildcard uris
       this.resourceHandler.process(response, uri);
     } else {

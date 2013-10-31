@@ -20,57 +20,74 @@ import ch.qos.logback.classic.Logger;
  */
 public class Main {
 
+  private Logger logger;
+
+  private SmallerResourceHandler resourceHandler;
+
+  private Server server;
+
   /**
    * @param args
    * @throws Exception
    */
-  public static void main(final String[] args) throws Exception {
-    Locale.setDefault(Locale.ENGLISH);
-    new Main().run(args);
+  public static void main(final String... args) throws Exception {
+    new Main().start(args);
   }
 
-  private void run(final String... args) throws Exception {
+  /**
+   * @param args
+   * @throws Exception
+   */
+  public void start(final String... args) throws Exception {
+    Locale.setDefault(Locale.ENGLISH);
+
     final Config config = parseArgs(args);
     if (config == null) {
       return;
     }
 
-    final Logger logger = (Logger) LoggerFactory.getLogger(Main.class);
+    this.logger = (Logger) LoggerFactory.getLogger(Main.class);
     if (config.isDebug()) {
-      logger.setLevel(Level.DEBUG);
+      this.logger.setLevel(Level.DEBUG);
     }
 
-    final SmallerResourceHandler resourceHandler = new SmallerResourceHandler(
-        config);
-    final Servlet servlet = new Servlet(config, resourceHandler);
-    final Server server = new Server(InetSocketAddress.createUnresolved(
+    this.resourceHandler = new SmallerResourceHandler(config);
+    final Servlet servlet = new Servlet(config, this.resourceHandler);
+    this.server = new Server(InetSocketAddress.createUnresolved(
         config.getHost(), config.getPort()));
     final ServletHandler handler = new ServletHandler();
     handler.addServletWithMapping(new ServletHolder(servlet), "/");
-    server.setHandler(handler);
-    server.start();
+    this.server.setHandler(handler);
+    this.server.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        if (resourceHandler != null) {
-          try {
-            resourceHandler.dispose();
-          } catch (final IOException e) {
-            logger.error("Failed to shutdown watchdog", e);
-          }
-        }
-        if (server != null) {
-          try {
-            server.stop();
-          } catch (final Exception e) {
-            logger.error("Failed to shutdown jetty", e);
-          }
-        }
+        Main.this.stop();
       }
     });
 
-    server.join();
+    this.server.join();
+  }
+
+  /**
+   * 
+   */
+  public void stop() {
+    if (this.resourceHandler != null) {
+      try {
+        this.resourceHandler.dispose();
+      } catch (final IOException e) {
+        this.logger.error("Failed to shutdown watchdog", e);
+      }
+    }
+    if (this.server != null) {
+      try {
+        this.server.stop();
+      } catch (final Exception e) {
+        this.logger.error("Failed to shutdown jetty", e);
+      }
+    }
   }
 
   private Config parseArgs(final String... args) {
@@ -79,12 +96,13 @@ public class Main {
     parser.setUsageWidth(80);
     try {
       parser.parseArgument(args);
+      config.checkValid(parser);
       if (config.isHelp()) {
         parser.printUsage(new PrintWriter(System.err), null);
         return null;
       }
     } catch (final CmdLineException e) {
-      System.err.println(e.getMessage());
+      System.err.println(e.getMessage() + "\n");
       parser.printUsage(new PrintWriter(System.err), null);
       return null;
     }

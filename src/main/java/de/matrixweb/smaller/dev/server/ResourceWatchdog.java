@@ -2,6 +2,7 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -82,6 +83,9 @@ public class ResourceWatchdog {
       WatchKey key;
       try {
         key = this.watchService.take();
+      } catch (final ClosedWatchServiceException e) {
+        this.runWatchdog = false;
+        continue;
       } catch (final InterruptedException e) {
         continue;
       }

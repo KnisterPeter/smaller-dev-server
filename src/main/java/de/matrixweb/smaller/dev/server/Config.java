@@ -3,6 +3,8 @@ package de.matrixweb.smaller.dev.server;
 import java.io.File;
 import java.util.List;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 /**
@@ -46,6 +48,19 @@ public class Config {
       + "  velocity   - Apache Velocity templates\n"
       + "  handlebars - Handlebars templates")
   private String templateEngine;
+
+  /**
+   * @param parser
+   * @throws CmdLineException
+   *           Thrown if option dependencies are not valid
+   */
+  public void checkValid(final CmdLineParser parser) throws CmdLineException {
+    if ((this.process != null || this.templateEngine != null)
+        && this.documentRoots == null) {
+      throw new CmdLineException(parser,
+          "--document-root is required if --process or --template-engine is given");
+    }
+  }
 
   /**
    * @return the help

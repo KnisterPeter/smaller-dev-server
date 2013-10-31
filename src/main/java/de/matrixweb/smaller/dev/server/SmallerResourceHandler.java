@@ -32,15 +32,15 @@ public class SmallerResourceHandler {
 
   private final Config config;
 
-  private final ProcessorFactory processorFactory;
+  private ProcessorFactory processorFactory;
 
   private final VFS vfs;
 
-  private final ResourceResolver resolver;
+  private ResourceResolver resolver;
 
-  private final Task task;
+  private Task task;
 
-  private final Pipeline pipeline;
+  private Pipeline pipeline;
 
   private final ResourceWatchdog resourceWatchdog;
 
@@ -52,15 +52,17 @@ public class SmallerResourceHandler {
    */
   public SmallerResourceHandler(final Config config) throws IOException {
     this.config = config;
-    this.processorFactory = new JavaEEProcessorFactory();
     this.vfs = new VFS();
-    this.resolver = new VFSResourceResolver(this.vfs);
-    this.pipeline = new Pipeline(this.processorFactory);
     this.resourceWatchdog = new ResourceWatchdog(this, config);
     prepareVfs();
-    this.task = new Task(this.config.getProcessors(), StringUtils.join(
-        this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
-        ','));
+    if (config.getProcess() != null) {
+      this.processorFactory = new JavaEEProcessorFactory();
+      this.resolver = new VFSResourceResolver(this.vfs);
+      this.pipeline = new Pipeline(this.processorFactory);
+      this.task = new Task(this.config.getProcessors(), StringUtils.join(
+          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
+          ','));
+    }
     this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
         this.vfs);
 
@@ -76,8 +78,10 @@ public class SmallerResourceHandler {
   }
 
   void smallerResources() {
-    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
-        this.task);
+    if (this.task != null) {
+      this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
+          this.resolver, this.task);
+    }
   }
 
   /**

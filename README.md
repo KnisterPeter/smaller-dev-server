@@ -42,11 +42,11 @@ Configuration / Commandline Parameter
 
 Template Data and Mock Data Server
 ----------------------------------
-For a request there could be a <request.path>.cfg.js file which contains some
+For a request there could be a <request.path>.cfg.json file which contains some
 json data structure providing template data or json data as request-response.
 
 For example if there is a request to '/page/detail.html' the config file
-for this request would be '/page/detail.html.cfg.js'.
+for this request would be '/page/detail.html.cfg.json'.
 The configuration in this file is structured like this:
 
     {

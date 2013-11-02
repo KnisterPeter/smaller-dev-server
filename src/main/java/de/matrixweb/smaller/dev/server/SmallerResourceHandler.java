@@ -2,6 +2,7 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +14,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -55,6 +57,8 @@ public class SmallerResourceHandler {
 
   private final TemplateEngine templateEngine;
 
+  private String liveReloadClient = null;
+
   /**
    * @param config
    * @throws IOException
@@ -91,6 +95,7 @@ public class SmallerResourceHandler {
       this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
           this.resolver, this.task);
     }
+    LiveReloadSocket.broadcastReload();
   }
 
   /**
@@ -119,7 +124,7 @@ public class SmallerResourceHandler {
       path += "index.html";
     }
     final PrintWriter writer = response.getWriter();
-    final Map<String, Object> data = readJsonData(request);
+    final Map<String, Object> data = readJsonData(path, request);
     if (data.containsKey("jsonResponse")) {
       response.setContentType("application/json");
       writer.write(new ObjectMapper().writeValueAsString(data
@@ -130,16 +135,38 @@ public class SmallerResourceHandler {
       }
       writer.write(this.templateEngine.render(path, data,
           (Map<String, Object>) data.get("templateData")));
+      if (this.config.isLiveReload()) {
+        writer.write(getLiveReloadClient());
+      }
     }
     writer.close();
   }
 
+  /**
+   * @return Returns the live-reload client code
+   * @throws IOException
+   */
+  public String getLiveReloadClient() throws IOException {
+    if (this.liveReloadClient == null) {
+      final StringBuilder sb = new StringBuilder();
+      sb.append("<script text=\"javascript\">");
+      final InputStream in = getClass().getResourceAsStream("/live-reload.js");
+      try {
+        sb.append(IOUtils.toString(in));
+      } finally {
+        in.close();
+      }
+      sb.append("</script>");
+      this.liveReloadClient = sb.toString();
+    }
+    return this.liveReloadClient;
+  }
+
   @SuppressWarnings("unchecked")
-  private Map<String, Object> readJsonData(final HttpServletRequest request)
-      throws IOException {
+  private Map<String, Object> readJsonData(final String path,
+      final HttpServletRequest request) throws IOException {
     Map<String, Object> o = null;
-    final String uri = request.getRequestURI();
-    final VFile file = this.vfs.find(uri + ".cfg.js");
+    final VFile file = this.vfs.find(path + ".cfg.json");
     if (file.exists()) {
       final Map<String, Object> data = new ObjectMapper().readValue(
           file.getURL(), Map.class);

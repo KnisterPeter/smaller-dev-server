@@ -8,11 +8,8 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -26,17 +23,19 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
+import org.eclipse.jetty.websocket.WebSocket;
+import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @author markusw
  */
-public class Servlet implements javax.servlet.Servlet {
+public class Servlet extends WebSocketServlet {
+
+  private static final long serialVersionUID = -7006026708380905881L;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Servlet.class);
-
-  private ServletConfig servletConfig;
 
   private final HttpClient client;
 
@@ -57,42 +56,56 @@ public class Servlet implements javax.servlet.Servlet {
   }
 
   /**
-   * @see javax.servlet.Servlet#init(javax.servlet.ServletConfig)
+   * @see org.eclipse.jetty.websocket.WebSocketFactory.Acceptor#doWebSocketConnect(javax.servlet.http.HttpServletRequest,
+   *      java.lang.String)
    */
   @Override
-  public void init(final ServletConfig config) throws ServletException {
-    this.servletConfig = config;
+  public WebSocket doWebSocketConnect(final HttpServletRequest request,
+      final String protocol) {
+    if ("live-reload".equals(protocol)) {
+      return LiveReloadSocket.create();
+    }
+    return null;
   }
 
   /**
-   * @see javax.servlet.Servlet#getServletConfig()
+   * @see javax.servlet.http.HttpServlet#doGet(javax.servlet.http.HttpServletRequest,
+   *      javax.servlet.http.HttpServletResponse)
    */
   @Override
-  public ServletConfig getServletConfig() {
-    return this.servletConfig;
+  protected void doGet(final HttpServletRequest request,
+      final HttpServletResponse response) throws ServletException, IOException {
+    handleHttpRequest(request, response);
   }
 
   /**
-   * @see javax.servlet.Servlet#getServletInfo()
+   * @see javax.servlet.http.HttpServlet#doPost(javax.servlet.http.HttpServletRequest,
+   *      javax.servlet.http.HttpServletResponse)
    */
   @Override
-  public String getServletInfo() {
-    return "";
+  protected void doPost(final HttpServletRequest request,
+      final HttpServletResponse response) throws ServletException, IOException {
+    handleHttpRequest(request, response);
   }
 
-  /**
-   * @see javax.servlet.Servlet#service(javax.servlet.ServletRequest,
-   *      javax.servlet.ServletResponse)
-   */
-  @Override
-  public void service(final ServletRequest request,
-      final ServletResponse response) throws ServletException, IOException {
+  private void handleHttpRequest(final HttpServletRequest request,
+      final HttpServletResponse response) throws IOException {
     try {
-      if (request instanceof HttpServletRequest) {
-        handleHttpRequest((HttpServletRequest) request,
-            (HttpServletResponse) response);
+      final String uri = request.getRequestURI();
+      if (this.config.getProcess() != null
+          && this.config.getProcess().contains(uri)) {
+        // TODO: Allow wildcard uris
+        this.resourceHandler.process(response, uri);
       } else {
-        LOGGER.warn("Received unhandled request");
+        try {
+          handleProxyRequest(request, response, uri);
+        } catch (final IOException e) {
+          try {
+            this.resourceHandler.renderTemplate(request, response, uri);
+          } catch (final IOException e2) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+          }
+        }
       }
     } catch (final Exception e) {
       LOGGER.error("Failed to handle request", e);
@@ -102,22 +115,6 @@ public class Servlet implements javax.servlet.Servlet {
       e.printStackTrace(writer);
       writer.write("</pre></body></html>");
       writer.close();
-    }
-  }
-
-  private void handleHttpRequest(final HttpServletRequest request,
-      final HttpServletResponse response) throws ServletException, IOException {
-    final String uri = request.getRequestURI();
-    if (this.config.getProcess() != null
-        && this.config.getProcess().contains(uri)) {
-      // TODO: Allow wildcard uris
-      this.resourceHandler.process(response, uri);
-    } else {
-      try {
-        handleProxyRequest(request, response, uri);
-      } catch (final IOException e) {
-        this.resourceHandler.renderTemplate(request, response, uri);
-      }
     }
   }
 
@@ -191,6 +188,10 @@ public class Servlet implements javax.servlet.Servlet {
       try {
         final ServletOutputStream out = response.getOutputStream();
         IOUtils.copy(in, out);
+        if (this.config.isLiveReload()
+            && "text/html".equals(contentType.getMimeType())) {
+          out.print(this.resourceHandler.getLiveReloadClient());
+        }
         out.close();
       } finally {
         in.close();
@@ -206,6 +207,7 @@ public class Servlet implements javax.servlet.Servlet {
     if (this.client != null) {
       this.client.dispose();
     }
+    super.destroy();
   }
 
 }

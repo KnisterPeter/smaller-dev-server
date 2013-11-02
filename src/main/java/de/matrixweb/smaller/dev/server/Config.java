@@ -49,6 +49,9 @@ public class Config {
       + "  handlebars - Handlebars templates")
   private String templateEngine;
 
+  @Option(name = "-l", aliases = { "--live-reload" }, usage = "Flag to enable live-reload feature")
+  private boolean liveReload;
+
   /**
    * @param parser
    * @throws CmdLineException
@@ -225,6 +228,21 @@ public class Config {
    */
   public void setTemplateEngine(final String templateEngine) {
     this.templateEngine = templateEngine;
+  }
+
+  /**
+   * @return the liveReload
+   */
+  public boolean isLiveReload() {
+    return this.liveReload;
+  }
+
+  /**
+   * @param liveReload
+   *          the liveReload to set
+   */
+  public void setLiveReload(final boolean liveReload) {
+    this.liveReload = liveReload;
   }
 
 }

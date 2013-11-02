@@ -31,6 +31,7 @@ Configuration / Commandline Parameter
     -d (--document-root) FILE  : The folders to scan for resources
     -h (--help)                : This screen
     -i (--in) VAL              : The main input files if any
+    -l (--live-reload)         : Flag to enable live-reload feature
     -p (--processors) VAL      : To processors to apply to intercepted requests
     -t (--template-engine) VAL : The template engine to use. Could be one of:
                                    raw        - Just deliveres raw html files

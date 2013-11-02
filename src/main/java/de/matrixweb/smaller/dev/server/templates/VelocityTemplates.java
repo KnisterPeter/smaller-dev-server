@@ -34,11 +34,11 @@ public class VelocityTemplates implements TemplateEngine {
 
   /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
-   *      java.util.Map)
+   *      java.util.Map, java.util.Map)
    */
   @Override
-  public String render(final String path, final Map<String, Object> data)
-      throws IOException {
+  public String render(final String path, final Map<String, Object> config,
+      final Map<String, Object> data) throws IOException {
     if (this.engine == null) {
       setupVelocityEngine();
     }
@@ -47,8 +47,10 @@ public class VelocityTemplates implements TemplateEngine {
         + ".vm");
 
     final VelocityContext context = new VelocityContext();
-    for (final Entry<String, Object> entry : data.entrySet()) {
-      context.put(entry.getKey(), entry.getValue());
+    if (data != null) {
+      for (final Entry<String, Object> entry : data.entrySet()) {
+        context.put(entry.getKey(), entry.getValue());
+      }
     }
 
     final Template template = this.engine.getTemplate(file.getPath());

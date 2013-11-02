@@ -42,4 +42,14 @@ public class HandlebarsTemplatesTest extends AbstractDevServerTest {
         is("\n\n  \n    a\n  \n    b\n  \n    c\n  \n\n"));
   }
 
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderOtherTemplate() throws Exception {
+    assertThat(IOUtils.toString(new URL(
+        "http://localhost:12345/sub/test-data.txt?template=other")),
+        is("OTHER HBS"));
+  }
+
 }

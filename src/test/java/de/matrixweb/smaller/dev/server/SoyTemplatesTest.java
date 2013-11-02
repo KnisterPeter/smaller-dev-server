@@ -42,4 +42,24 @@ public class SoyTemplatesTest extends AbstractDevServerTest {
         is("abc"));
   }
 
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderOtherTemplate() throws Exception {
+    assertThat(IOUtils.toString(new URL(
+        "http://localhost:12345/sub/test-data.txt?template=other")),
+        is("OTHER SOY"));
+  }
+
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderSameTemplate() throws Exception {
+    assertThat(IOUtils.toString(new URL(
+        "http://localhost:12345/sub/test-data.txt?template=same")),
+        is("SAME SOY"));
+  }
+
 }

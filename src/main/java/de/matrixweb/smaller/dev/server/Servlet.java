@@ -95,6 +95,7 @@ public class Servlet implements javax.servlet.Servlet {
         LOGGER.warn("Received unhandled request");
       }
     } catch (final Exception e) {
+      LOGGER.error("Failed to handle request", e);
       response.setContentType("text/html");
       final PrintWriter writer = response.getWriter();
       writer.write("<html><body><pre>");

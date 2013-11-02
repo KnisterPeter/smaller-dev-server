@@ -18,11 +18,14 @@ public interface TemplateEngine {
   /**
    * @param path
    *          The path to the template
+   * @param config
+   *          The template configuration
    * @param data
    *          The data to render into the template
    * @return Returns the rendered template as {@link String}
    * @throws IOException
    */
-  String render(String path, Map<String, Object> data) throws IOException;
+  String render(String path, Map<String, Object> config,
+      Map<String, Object> data) throws IOException;
 
 }

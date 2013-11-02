@@ -24,11 +24,11 @@ public class RawTemplates implements TemplateEngine {
 
   /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
-   *      java.util.Map)
+   *      java.util.Map, java.util.Map)
    */
   @Override
-  public String render(final String path, final Map<String, Object> data)
-      throws IOException {
+  public String render(final String path, final Map<String, Object> config,
+      final Map<String, Object> data) throws IOException {
     return VFSUtils.readToString(this.vfs.find(path));
   }
 

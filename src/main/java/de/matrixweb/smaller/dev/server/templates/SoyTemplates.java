@@ -29,19 +29,25 @@ public class SoyTemplates implements TemplateEngine {
 
   /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
-   *      java.util.Map)
+   *      java.util.Map, java.util.Map)
    */
   @Override
-  public String render(final String path, final Map<String, Object> data)
-      throws IOException {
+  public String render(final String path, final Map<String, Object> config,
+      final Map<String, Object> data) throws IOException {
     final VFile file = this.vfs.find(FilenameUtils.removeExtension(path)
         + ".soy");
+
     final SoyFileSet sfs = new SoyFileSet.Builder().add(
         VFSUtils.readToString(file), file.getPath()).build();
-    // TODO: Cache this, but change on file change
     final SoyTofu tofu = sfs.compileToTofu();
-    // TODO: Make this configurable
-    return tofu.newRenderer("namespace.template").setData(data).render();
+
+    String templateName = (String) config.get("templateName");
+    if (templateName == null) {
+      templateName = path.substring(path.lastIndexOf('/') + 1);
+    }
+    templateName = templateName.replace("-", "");
+
+    return tofu.newRenderer(templateName).setData(data).render();
   }
 
 }

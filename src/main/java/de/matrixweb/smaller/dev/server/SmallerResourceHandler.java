@@ -111,6 +111,7 @@ public class SmallerResourceHandler {
    * @param uri
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   public void renderTemplate(final HttpServletRequest request,
       final HttpServletResponse response, final String uri) throws IOException {
     String path = uri;
@@ -118,7 +119,18 @@ public class SmallerResourceHandler {
       path += "index.html";
     }
     final PrintWriter writer = response.getWriter();
-    writer.write(this.templateEngine.render(path, readJsonData(request)));
+    final Map<String, Object> data = readJsonData(request);
+    if (data.containsKey("jsonResponse")) {
+      response.setContentType("application/json");
+      writer.write(new ObjectMapper().writeValueAsString(data
+          .get("jsonResponse")));
+    } else {
+      if (data.containsKey("templatePath")) {
+        path = data.get("templatePath").toString();
+      }
+      writer.write(this.templateEngine.render(path, data,
+          (Map<String, Object>) data.get("templateData")));
+    }
     writer.close();
   }
 

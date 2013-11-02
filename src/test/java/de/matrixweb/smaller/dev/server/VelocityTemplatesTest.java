@@ -42,4 +42,14 @@ public class VelocityTemplatesTest extends AbstractDevServerTest {
         is("    a\n    b\n    c\n"));
   }
 
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderOtherTemplate() throws Exception {
+    assertThat(IOUtils.toString(new URL(
+        "http://localhost:12345/sub/test-data.txt?template=other")),
+        is("OTHER VM"));
+  }
+
 }

@@ -23,6 +23,16 @@ public class RawTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
+   */
+  @Override
+  public boolean compile(final String path) {
+    // We could not decice here if this is a smaller-resource or a template
+    // resource
+    return false;
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
    *      java.util.Map, java.util.Map)
    */

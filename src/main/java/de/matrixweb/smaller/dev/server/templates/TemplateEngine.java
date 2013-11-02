@@ -17,6 +17,15 @@ public interface TemplateEngine {
 
   /**
    * @param path
+   * @return Returns true if this {@link TemplateEngine} compiled the given
+   *         resource, false otherwise
+   * @throws IOException
+   *           Throw if the compiler fails
+   */
+  boolean compile(String path) throws IOException;
+
+  /**
+   * @param path
    *          The path to the template
    * @param config
    *          The template configuration

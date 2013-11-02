@@ -15,7 +15,9 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,6 +26,8 @@ import java.util.Map;
 public class ResourceWatchdog {
 
   private final SmallerResourceHandler resourceHandler;
+
+  private final Config config;
 
   private final WatchService watchService;
 
@@ -47,6 +51,7 @@ public class ResourceWatchdog {
   public ResourceWatchdog(final SmallerResourceHandler resourceHandler,
       final Config config) throws IOException {
     this.resourceHandler = resourceHandler;
+    this.config = config;
     this.watchService = FileSystems.getDefault().newWatchService();
     this.watches = new HashMap<WatchKey, Path>();
     for (final File root : config.getDocumentRoots()) {
@@ -89,32 +94,54 @@ public class ResourceWatchdog {
       } catch (final InterruptedException e) {
         continue;
       }
-      boolean requireProcessResources = false;
-      final Path path = this.watches.get(key);
-      for (final WatchEvent<?> event : key.pollEvents()) {
-        final WatchEvent.Kind<?> kind = event.kind();
-        if (kind == StandardWatchEventKinds.OVERFLOW) {
-          continue;
-        }
-        requireProcessResources = true;
-        if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
-          final WatchEvent<Path> ev = cast(event);
-          final Path child = path.resolve(ev.context());
-          try {
-            if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
-              watchRecursive(child);
-            }
-          } catch (final IOException x) {
-            // Ignore this one
-          }
-        }
-      }
+      final List<String> changedResources = loopEvents(key,
+          this.watches.get(key));
       final boolean valid = key.reset();
       if (!valid) {
         this.watches.remove(key);
       }
-      if (requireProcessResources) {
-        this.resourceHandler.smallerResources();
+      if (changedResources.size() > 0) {
+        this.resourceHandler.smallerResources(changedResources);
+      }
+    }
+  }
+
+  private List<String> loopEvents(final WatchKey key, final Path path) {
+    final List<String> changedResources = new ArrayList<>();
+
+    for (final WatchEvent<?> event : key.pollEvents()) {
+      final WatchEvent.Kind<?> kind = event.kind();
+      if (kind == StandardWatchEventKinds.OVERFLOW) {
+        continue;
+      }
+      final WatchEvent<Path> ev = cast(event);
+      final Path child = path.resolve(ev.context());
+      findResourceRoot(changedResources, child);
+      watchNewDirectories(kind, child);
+    }
+
+    return changedResources;
+  }
+
+  private void findResourceRoot(final List<String> changedResources,
+      final Path child) {
+    for (final File root : this.config.getDocumentRoots()) {
+      if (child.startsWith(root.getPath())) {
+        changedResources.add(child.toFile().getPath()
+            .substring(root.getPath().length()));
+      }
+    }
+  }
+
+  private void watchNewDirectories(final WatchEvent.Kind<?> kind,
+      final Path child) {
+    if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+      try {
+        if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
+          watchRecursive(child);
+        }
+      } catch (final IOException x) {
+        // Ignore this one
       }
     }
   }

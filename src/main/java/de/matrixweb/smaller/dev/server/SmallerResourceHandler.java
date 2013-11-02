@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 
@@ -40,6 +43,9 @@ import de.matrixweb.smaller.resource.vfs.wrapped.WrappedSystem;
  * @author markusw
  */
 public class SmallerResourceHandler {
+
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(SmallerResourceHandler.class);
 
   private final Config config;
 
@@ -79,7 +85,7 @@ public class SmallerResourceHandler {
     this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
         this.vfs);
 
-    smallerResources();
+    smallerResources(null);
   }
 
   private final void prepareVfs() throws IOException {
@@ -90,10 +96,27 @@ public class SmallerResourceHandler {
     this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
   }
 
-  void smallerResources() {
-    if (this.task != null) {
-      this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
-          this.resolver, this.task);
+  void smallerResources(final List<String> changedResources) {
+    List<String> remaining = null;
+    if (changedResources != null) {
+      remaining = new ArrayList<>(changedResources);
+      final Iterator<String> it = remaining.iterator();
+      while (it.hasNext()) {
+        final String path = it.next();
+        try {
+          if (this.templateEngine.compile(path)) {
+            it.remove();
+          }
+        } catch (final IOException e) {
+          LOGGER.warn("Failed to compile template: " + path, e);
+        }
+      }
+    }
+    if (remaining == null || remaining.size() > 0) {
+      if (this.task != null) {
+        this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
+            this.resolver, this.task);
+      }
     }
     LiveReloadSocket.broadcastReload();
   }

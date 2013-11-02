@@ -2,11 +2,13 @@ package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 
 import com.github.jknack.handlebars.Handlebars;
+import com.github.jknack.handlebars.Template;
 import com.github.jknack.handlebars.io.URLTemplateLoader;
 
 import de.matrixweb.smaller.resource.vfs.VFS;
@@ -26,6 +28,8 @@ public class HandlebarsTemplates implements TemplateEngine {
 
   private VFS vfs;
 
+  private final Map<String, Template> cache = new HashMap<>();
+
   /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
    */
@@ -35,14 +39,34 @@ public class HandlebarsTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
+   */
+  @Override
+  public boolean compile(final String path) throws IOException {
+    final boolean handled = path.endsWith("hbs");
+    if (handled) {
+      internalCompile(path);
+    }
+    return handled;
+  }
+
+  private void internalCompile(final String path) throws IOException {
+    final String key = FilenameUtils.removeExtension(path);
+    this.cache.put(key, this.handlebars.compile(key));
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
    *      java.util.Map, java.util.Map)
    */
   @Override
   public String render(final String path, final Map<String, Object> config,
       final Map<String, Object> data) throws IOException {
-    return this.handlebars.compile(FilenameUtils.removeExtension(path)).apply(
-        data);
+    final String key = FilenameUtils.removeExtension(path);
+    if (!this.cache.containsKey(key)) {
+      internalCompile(path);
+    }
+    return this.cache.get(key).apply(data);
   }
 
 }

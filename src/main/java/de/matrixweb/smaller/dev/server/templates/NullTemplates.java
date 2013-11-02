@@ -18,6 +18,14 @@ public class NullTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
+   */
+  @Override
+  public boolean compile(final String path) {
+    return false;
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
    *      java.util.Map, java.util.Map)
    */

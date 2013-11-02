@@ -1,6 +1,7 @@
 package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
@@ -9,8 +10,6 @@ import com.google.template.soy.SoyFileSet;
 import com.google.template.soy.tofu.SoyTofu;
 
 import de.matrixweb.smaller.resource.vfs.VFS;
-import de.matrixweb.smaller.resource.vfs.VFSUtils;
-import de.matrixweb.smaller.resource.vfs.VFile;
 
 /**
  * @author markusw
@@ -18,6 +17,8 @@ import de.matrixweb.smaller.resource.vfs.VFile;
 public class SoyTemplates implements TemplateEngine {
 
   private VFS vfs;
+
+  private final Map<String, SoyTofu> cache = new HashMap<>();
 
   /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
@@ -28,18 +29,35 @@ public class SoyTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
+   */
+  @Override
+  public boolean compile(final String path) throws IOException {
+    final boolean handled = path.endsWith("soy");
+    if (handled) {
+      internalCompile(path);
+    }
+    return handled;
+  }
+
+  private void internalCompile(final String path) throws IOException {
+    final String key = FilenameUtils.removeExtension(path);
+    this.cache.put(key,
+        new SoyFileSet.Builder().add(this.vfs.find(key + ".soy").getURL())
+            .build().compileToTofu());
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
    *      java.util.Map, java.util.Map)
    */
   @Override
   public String render(final String path, final Map<String, Object> config,
       final Map<String, Object> data) throws IOException {
-    final VFile file = this.vfs.find(FilenameUtils.removeExtension(path)
-        + ".soy");
-
-    final SoyFileSet sfs = new SoyFileSet.Builder().add(
-        VFSUtils.readToString(file), file.getPath()).build();
-    final SoyTofu tofu = sfs.compileToTofu();
+    final String key = FilenameUtils.removeExtension(path);
+    if (!this.cache.containsKey(key)) {
+      internalCompile(path);
+    }
 
     String templateName = (String) config.get("templateName");
     if (templateName == null) {
@@ -47,7 +65,7 @@ public class SoyTemplates implements TemplateEngine {
     }
     templateName = templateName.replace("-", "");
 
-    return tofu.newRenderer(templateName).setData(data).render();
+    return this.cache.get(key).newRenderer(templateName).setData(data).render();
   }
 
 }

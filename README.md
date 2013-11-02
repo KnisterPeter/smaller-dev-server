@@ -39,6 +39,45 @@ Configuration / Commandline Parameter
                                    handlebars - Handlebars templates
     -v (--verbose)             : To log debug info
 
+Template Data and Mock Data Server
+----------------------------------
+For a request there could be a <request.path>.cfg.js file which contains some
+json data structure providing template data or json data as request-response.
+
+For example if there is a request to '/page/detail.html' the config file
+for this request would be '/page/detail.html.cfg.js'.
+The configuration in this file is structured like this:
+
+    {
+      // Request parameters order by key and if multiple values per key, the 
+      // values are ordered as well.
+      // Using this one could return different responses based on the request
+      // parameters
+      "": {
+        // These are the data which is given to the template engine
+        "templateData" : {
+          "key" : "value"
+          "map" : {}
+          "list": []
+        }
+      },
+      "template=other": {
+        // The template path is optional and could be used to specify a template
+        // which is located under a differnt name or path as the request
+        "templatePath" : "/sub/other.template",
+        // The template name is used by the closure-templates only to define the
+        // template method to call.
+        "templateName" : "namespace.renderOther"
+      },
+      "response=json": {
+        // The key jsonResponse will define the json response object
+        // If defined no template will be rendered, but the json object is returned
+        "jsonResponse" : {
+          "a":"b"
+        }
+      }
+    }
+
 Credits
 -------
 

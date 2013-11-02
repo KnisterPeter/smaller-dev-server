@@ -19,7 +19,7 @@ public class VelocityTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/tests -t velocity";
+    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t velocity";
   }
 
   /**
@@ -30,6 +30,16 @@ public class VelocityTemplatesTest extends AbstractDevServerTest {
     assertThat(
         IOUtils.toString(new URL("http://localhost:12345/sub/test.txt")),
         is("VM"));
+  }
+
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderWithData() throws Exception {
+    assertThat(
+        IOUtils.toString(new URL("http://localhost:12345/sub/test-data.txt")),
+        is("    a\n    b\n    c\n"));
   }
 
 }

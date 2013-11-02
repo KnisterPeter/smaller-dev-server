@@ -2,6 +2,8 @@ package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.apache.commons.io.FilenameUtils;
@@ -31,10 +33,12 @@ public class VelocityTemplates implements TemplateEngine {
   }
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
+   *      java.util.Map)
    */
   @Override
-  public String render(final String path) throws IOException {
+  public String render(final String path, final Map<String, Object> data)
+      throws IOException {
     if (this.engine == null) {
       setupVelocityEngine();
     }
@@ -43,6 +47,10 @@ public class VelocityTemplates implements TemplateEngine {
         + ".vm");
 
     final VelocityContext context = new VelocityContext();
+    for (final Entry<String, Object> entry : data.entrySet()) {
+      context.put(entry.getKey(), entry.getValue());
+    }
+
     final Template template = this.engine.getTemplate(file.getPath());
     final StringWriter writer = new StringWriter();
     template.merge(context, writer);

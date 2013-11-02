@@ -19,7 +19,7 @@ public class SoyTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/tests -t soy";
+    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t soy";
   }
 
   /**
@@ -30,6 +30,16 @@ public class SoyTemplatesTest extends AbstractDevServerTest {
     assertThat(
         IOUtils.toString(new URL("http://localhost:12345/sub/test.txt")),
         is("SOY"));
+  }
+
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderWithData() throws Exception {
+    assertThat(
+        IOUtils.toString(new URL("http://localhost:12345/sub/test-data.txt")),
+        is("abc"));
   }
 
 }

@@ -115,7 +115,7 @@ public class Servlet implements javax.servlet.Servlet {
       try {
         handleProxyRequest(request, response, uri);
       } catch (final IOException e) {
-        this.resourceHandler.renderTemplate(response, uri);
+        this.resourceHandler.renderTemplate(request, response, uri);
       }
     }
   }

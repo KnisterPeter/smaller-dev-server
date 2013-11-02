@@ -19,7 +19,7 @@ public class RawTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/tests -t raw";
+    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t raw";
   }
 
   /**

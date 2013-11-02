@@ -2,6 +2,7 @@ package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -34,12 +35,14 @@ public class HandlebarsTemplates implements TemplateEngine {
   }
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
+   *      java.util.Map)
    */
   @Override
-  public String render(final String path) throws IOException {
+  public String render(final String path, final Map<String, Object> data)
+      throws IOException {
     return this.handlebars.compile(FilenameUtils.removeExtension(path)).apply(
-        null);
+        data);
   }
 
 }

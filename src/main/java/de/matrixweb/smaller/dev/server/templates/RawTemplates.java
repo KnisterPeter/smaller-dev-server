@@ -1,6 +1,7 @@
 package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
+import java.util.Map;
 
 import de.matrixweb.smaller.resource.vfs.VFS;
 import de.matrixweb.smaller.resource.vfs.VFSUtils;
@@ -16,15 +17,18 @@ public class RawTemplates implements TemplateEngine {
    * @param vfs
    *          the vfs to set
    */
+  @Override
   public void setVfs(final VFS vfs) {
     this.vfs = vfs;
   }
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
+   *      java.util.Map)
    */
   @Override
-  public String render(final String path) throws IOException {
+  public String render(final String path, final Map<String, Object> data)
+      throws IOException {
     return VFSUtils.readToString(this.vfs.find(path));
   }
 

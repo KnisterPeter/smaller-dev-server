@@ -19,7 +19,7 @@ public class HandlebarsTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/tests -t handlebars";
+    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t handlebars";
   }
 
   /**
@@ -30,6 +30,16 @@ public class HandlebarsTemplatesTest extends AbstractDevServerTest {
     assertThat(
         IOUtils.toString(new URL("http://localhost:12345/sub/test.txt")),
         is("\nHBS\n"));
+  }
+
+  /**
+   * @throws Exception
+   */
+  @Test
+  public void testRenderWithData() throws Exception {
+    assertThat(
+        IOUtils.toString(new URL("http://localhost:12345/sub/test-data.txt")),
+        is("\n\n  \n    a\n  \n    b\n  \n    c\n  \n\n"));
   }
 
 }

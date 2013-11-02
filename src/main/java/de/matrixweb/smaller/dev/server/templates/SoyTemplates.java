@@ -1,6 +1,7 @@
 package de.matrixweb.smaller.dev.server.templates;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -27,10 +28,12 @@ public class SoyTemplates implements TemplateEngine {
   }
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#render(java.lang.String,
+   *      java.util.Map)
    */
   @Override
-  public String render(final String path) throws IOException {
+  public String render(final String path, final Map<String, Object> data)
+      throws IOException {
     final VFile file = this.vfs.find(FilenameUtils.removeExtension(path)
         + ".soy");
     final SoyFileSet sfs = new SoyFileSet.Builder().add(
@@ -38,7 +41,7 @@ public class SoyTemplates implements TemplateEngine {
     // TODO: Cache this, but change on file change
     final SoyTofu tofu = sfs.compileToTofu();
     // TODO: Make this configurable
-    return tofu.newRenderer("namespace.template").render();
+    return tofu.newRenderer("namespace.template").setData(data).render();
   }
 
 }

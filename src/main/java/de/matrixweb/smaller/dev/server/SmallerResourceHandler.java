@@ -4,11 +4,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.common.base.Joiner;
 
 import de.matrixweb.smaller.common.Task;
 import de.matrixweb.smaller.common.Version;
@@ -21,6 +29,7 @@ import de.matrixweb.smaller.resource.impl.JavaEEProcessorFactory;
 import de.matrixweb.smaller.resource.vfs.VFS;
 import de.matrixweb.smaller.resource.vfs.VFSResourceResolver;
 import de.matrixweb.smaller.resource.vfs.VFSUtils;
+import de.matrixweb.smaller.resource.vfs.VFile;
 import de.matrixweb.smaller.resource.vfs.wrapped.JavaFile;
 import de.matrixweb.smaller.resource.vfs.wrapped.MergingVFS;
 import de.matrixweb.smaller.resource.vfs.wrapped.WrappedSystem;
@@ -97,19 +106,59 @@ public class SmallerResourceHandler {
   }
 
   /**
+   * @param request
    * @param response
    * @param uri
    * @throws IOException
    */
-  public void renderTemplate(final HttpServletResponse response,
-      final String uri) throws IOException {
+  public void renderTemplate(final HttpServletRequest request,
+      final HttpServletResponse response, final String uri) throws IOException {
     String path = uri;
     if ("/".equals(path)) {
       path += "index.html";
     }
     final PrintWriter writer = response.getWriter();
-    writer.write(this.templateEngine.render(path));
+    writer.write(this.templateEngine.render(path, readJsonData(request)));
     writer.close();
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> readJsonData(final HttpServletRequest request)
+      throws IOException {
+    Map<String, Object> o = null;
+    final String uri = request.getRequestURI();
+    final VFile file = this.vfs.find(uri + ".cfg.js");
+    if (file.exists()) {
+      final Map<String, Object> data = new ObjectMapper().readValue(
+          file.getURL(), Map.class);
+      o = (Map<String, Object>) data.get(createRequestParamKey(request));
+    }
+    if (o == null) {
+      o = new HashMap<>();
+    }
+    return o;
+  }
+
+  private String createRequestParamKey(final HttpServletRequest request)
+      throws IOException {
+    final List<String> parts = new ArrayList<>();
+
+    final List<String> names = new ArrayList<>(request.getParameterMap()
+        .keySet());
+    Collections.sort(names);
+    for (final String name : names) {
+      final String[] values = request.getParameterValues(name);
+      if (values.length > 1) {
+        Arrays.sort(values);
+        for (final String value : values) {
+          parts.add(name + "=" + value);
+        }
+      } else {
+        parts.add(name + "=" + values[0]);
+      }
+    }
+
+    return Joiner.on('&').join(parts);
   }
 
   /**

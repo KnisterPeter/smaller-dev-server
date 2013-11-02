@@ -8,7 +8,7 @@
   </parent>
   <groupId>de.matrixweb.smaller</groupId>
   <artifactId>smaller-dev-server</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0-SNAPSHOT</version>
 
   <name>Smaller Development Server</name>
   <description>

@@ -42,6 +42,7 @@ Configuration / Commandline Parameter
 
 Template Data and Mock Data Server
 ----------------------------------
+
 For a request there could be a <request.path>.cfg.json file which contains some
 json data structure providing template data or json data as request-response.
 
@@ -78,6 +79,15 @@ The configuration in this file is structured like this:
         }
       }
     }
+
+Live Reload Feature
+-------------------
+
+'Live Reloading' means when a server resource is modified and saved the browser
+does a page reload without user interaction.
+This is achieved using websockets and server push notifications on change events.
+When activating the live reload feature a small javascript in injected in every
+html page which activates the websocket listening.
 
 Credits
 -------

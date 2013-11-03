@@ -6,7 +6,7 @@ import java.net.InetSocketAddress;
 import java.util.Locale;
 
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -55,8 +55,8 @@ public class Main {
     final Servlet servlet = new Servlet(config, this.resourceHandler);
     this.server = new Server(InetSocketAddress.createUnresolved(
         config.getHost(), config.getPort()));
-    final ServletHandler handler = new ServletHandler();
-    handler.addServletWithMapping(new ServletHolder(servlet), "/");
+    final ServletContextHandler handler = new ServletContextHandler();
+    handler.addServlet(new ServletHolder(servlet), "/");
     this.server.setHandler(handler);
     this.server.start();
 

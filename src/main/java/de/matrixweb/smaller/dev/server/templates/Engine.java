@@ -1,7 +1,7 @@
 package de.matrixweb.smaller.dev.server.templates;
 
 import de.matrixweb.smaller.common.SmallerException;
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw

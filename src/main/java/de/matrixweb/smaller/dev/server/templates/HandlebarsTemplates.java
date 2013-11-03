@@ -11,7 +11,7 @@ import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
 import com.github.jknack.handlebars.io.URLTemplateLoader;
 
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw
@@ -31,7 +31,7 @@ public class HandlebarsTemplates implements TemplateEngine {
   private final Map<String, Template> cache = new HashMap<>();
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.vfs.VFS)
    */
   @Override
   public void setVfs(final VFS vfs) {

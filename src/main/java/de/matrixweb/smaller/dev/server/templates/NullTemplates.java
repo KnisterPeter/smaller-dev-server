@@ -3,7 +3,7 @@ package de.matrixweb.smaller.dev.server.templates;
 import java.io.IOException;
 import java.util.Map;
 
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw
@@ -11,7 +11,7 @@ import de.matrixweb.smaller.resource.vfs.VFS;
 public class NullTemplates implements TemplateEngine {
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.vfs.VFS)
    */
   @Override
   public void setVfs(final VFS vfs) {

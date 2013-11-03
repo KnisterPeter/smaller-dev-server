@@ -3,7 +3,7 @@ package de.matrixweb.smaller.dev.server.templates;
 import java.io.IOException;
 import java.util.Map;
 
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw

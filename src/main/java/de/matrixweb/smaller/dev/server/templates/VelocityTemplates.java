@@ -13,7 +13,7 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.resource.loader.URLResourceLoader;
 
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw
@@ -27,7 +27,7 @@ public class VelocityTemplates implements TemplateEngine {
   private final Map<String, Template> cache = new HashMap<>();
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.vfs.VFS)
    */
   @Override
   public void setVfs(final VFS vfs) {

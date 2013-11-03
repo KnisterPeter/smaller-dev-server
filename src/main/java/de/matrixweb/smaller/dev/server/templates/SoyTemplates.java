@@ -9,7 +9,7 @@ import org.apache.commons.io.FilenameUtils;
 import com.google.template.soy.SoyFileSet;
 import com.google.template.soy.tofu.SoyTofu;
 
-import de.matrixweb.smaller.resource.vfs.VFS;
+import de.matrixweb.vfs.VFS;
 
 /**
  * @author markusw
@@ -21,7 +21,7 @@ public class SoyTemplates implements TemplateEngine {
   private final Map<String, SoyTofu> cache = new HashMap<>();
 
   /**
-   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.smaller.resource.vfs.VFS)
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#setVfs(de.matrixweb.vfs.VFS)
    */
   @Override
   public void setVfs(final VFS vfs) {

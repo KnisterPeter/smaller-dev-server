@@ -30,14 +30,14 @@ import de.matrixweb.smaller.dev.server.templates.TemplateEngine;
 import de.matrixweb.smaller.pipeline.Pipeline;
 import de.matrixweb.smaller.resource.ProcessorFactory;
 import de.matrixweb.smaller.resource.ResourceResolver;
+import de.matrixweb.smaller.resource.VFSResourceResolver;
 import de.matrixweb.smaller.resource.impl.JavaEEProcessorFactory;
-import de.matrixweb.smaller.resource.vfs.VFS;
-import de.matrixweb.smaller.resource.vfs.VFSResourceResolver;
-import de.matrixweb.smaller.resource.vfs.VFSUtils;
-import de.matrixweb.smaller.resource.vfs.VFile;
-import de.matrixweb.smaller.resource.vfs.wrapped.JavaFile;
-import de.matrixweb.smaller.resource.vfs.wrapped.MergingVFS;
-import de.matrixweb.smaller.resource.vfs.wrapped.WrappedSystem;
+import de.matrixweb.vfs.VFS;
+import de.matrixweb.vfs.VFSUtils;
+import de.matrixweb.vfs.VFile;
+import de.matrixweb.vfs.wrapped.JavaFile;
+import de.matrixweb.vfs.wrapped.MergingVFS;
+import de.matrixweb.vfs.wrapped.WrappedSystem;
 
 /**
  * @author markusw

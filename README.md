@@ -89,6 +89,11 @@ This is achieved using websockets and server push notifications on change events
 When activating the live reload feature a small javascript in injected in every
 html page which activates the websocket listening.
 
+Source-Maps
+-----------
+
+Source-Maps for Coffee-Script, Browserify and LessJS are enabled by default.
+
 Credits
 -------
 

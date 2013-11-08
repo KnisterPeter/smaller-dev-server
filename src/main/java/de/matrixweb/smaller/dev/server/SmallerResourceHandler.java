@@ -44,7 +44,8 @@ import de.matrixweb.vfs.wrapped.WrappedSystem;
  */
 public class SmallerResourceHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SmallerResourceHandler.class);
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(SmallerResourceHandler.class);
 
   private final Config config;
 
@@ -69,21 +70,28 @@ public class SmallerResourceHandler {
    * @throws IOException
    */
   public SmallerResourceHandler(final Config config) throws IOException {
-    this.config = config;
-    this.vfs = new VFS();
-    this.resourceWatchdog = new ResourceWatchdog(this, config);
-    prepareVfs();
-    if (config.getProcess() != null) {
-      this.processorFactory = new JavaEEProcessorFactory();
-      this.resolver = new VFSResourceResolver(this.vfs);
-      this.pipeline = new Pipeline(this.processorFactory);
-      this.task = new Task(this.config.getProcessors(), StringUtils.join(this.config.getIn(), ','), StringUtils.join(
-          this.config.getProcess(), ','));
-      this.task.setOptionsDefinition("global:source-maps=true");
-    }
-    this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(this.vfs);
+    try {
+      this.config = config;
+      this.vfs = new VFS();
+      this.resourceWatchdog = new ResourceWatchdog(this, config);
+      prepareVfs();
+      if (config.getProcess() != null) {
+        this.processorFactory = new JavaEEProcessorFactory();
+        this.resolver = new VFSResourceResolver(this.vfs);
+        this.pipeline = new Pipeline(this.processorFactory);
+        this.task = new Task(this.config.getProcessors(), StringUtils.join(
+            this.config.getIn(), ','), StringUtils.join(
+            this.config.getProcess(), ','));
+        this.task.setOptionsDefinition("global:source-maps=true");
+      }
+      this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
+          this.vfs);
 
-    smallerResources(null);
+      smallerResources(null);
+    } catch (IOException | RuntimeException e) {
+      dispose();
+      throw e;
+    }
   }
 
   private final void prepareVfs() throws IOException {
@@ -112,7 +120,8 @@ public class SmallerResourceHandler {
     }
     if (remaining == null || remaining.size() > 0) {
       if (this.task != null) {
-        this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver, this.task);
+        this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
+            this.resolver, this.task);
       }
     }
     LiveReloadSocket.broadcastReload();
@@ -123,7 +132,8 @@ public class SmallerResourceHandler {
    * @param uri
    * @throws IOException
    */
-  public void process(final HttpServletResponse response, final String uri) throws IOException {
+  public void process(final HttpServletResponse response, final String uri)
+      throws IOException {
     final PrintWriter writer = response.getWriter();
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
     writer.close();
@@ -136,8 +146,8 @@ public class SmallerResourceHandler {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public void renderTemplate(final HttpServletRequest request, final HttpServletResponse response, final String uri)
-      throws IOException {
+  public void renderTemplate(final HttpServletRequest request,
+      final HttpServletResponse response, final String uri) throws IOException {
     String path = uri;
     if ("/".equals(path)) {
       path += "index.html";
@@ -146,12 +156,14 @@ public class SmallerResourceHandler {
     final Map<String, Object> data = readJsonData(path, request);
     if (data.containsKey("jsonResponse")) {
       response.setContentType("application/json");
-      writer.write(new ObjectMapper().writeValueAsString(data.get("jsonResponse")));
+      writer.write(new ObjectMapper().writeValueAsString(data
+          .get("jsonResponse")));
     } else {
       if (data.containsKey("templatePath")) {
         path = data.get("templatePath").toString();
       }
-      writer.write(this.templateEngine.render(path, data, (Map<String, Object>) data.get("templateData")));
+      writer.write(this.templateEngine.render(path, data,
+          (Map<String, Object>) data.get("templateData")));
       if (this.config.isLiveReload()) {
         writer.write(getLiveReloadClient());
       }
@@ -180,11 +192,13 @@ public class SmallerResourceHandler {
   }
 
   @SuppressWarnings("unchecked")
-  private Map<String, Object> readJsonData(final String path, final HttpServletRequest request) throws IOException {
+  private Map<String, Object> readJsonData(final String path,
+      final HttpServletRequest request) throws IOException {
     Map<String, Object> o = null;
     final VFile file = this.vfs.find(path + ".cfg.json");
     if (file.exists()) {
-      final Map<String, Object> data = new ObjectMapper().readValue(file.getURL(), Map.class);
+      final Map<String, Object> data = new ObjectMapper().readValue(
+          file.getURL(), Map.class);
       o = (Map<String, Object>) data.get(createRequestParamKey(request));
     }
     if (o == null) {
@@ -193,10 +207,12 @@ public class SmallerResourceHandler {
     return o;
   }
 
-  private String createRequestParamKey(final HttpServletRequest request) throws IOException {
+  private String createRequestParamKey(final HttpServletRequest request)
+      throws IOException {
     final List<String> parts = new ArrayList<>();
 
-    final List<String> names = new ArrayList<>(request.getParameterMap().keySet());
+    final List<String> names = new ArrayList<>(request.getParameterMap()
+        .keySet());
     Collections.sort(names);
     for (final String name : names) {
       final String[] values = request.getParameterValues(name);

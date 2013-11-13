@@ -53,6 +53,7 @@ public class Servlet extends WebSocketServlet {
     this.resourceHandler = resourceHandler;
     this.client = new HttpClient(new HttpHost(config.getProxyhost(),
         config.getProxyport()), config.getPort());
+    LiveReloadSocket.start();
   }
 
   /**
@@ -207,6 +208,7 @@ public class Servlet extends WebSocketServlet {
     if (this.client != null) {
       this.client.dispose();
     }
+    LiveReloadSocket.stop();
     super.destroy();
   }
 

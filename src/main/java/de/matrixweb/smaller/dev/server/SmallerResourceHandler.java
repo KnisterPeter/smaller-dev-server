@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 
+import de.matrixweb.smaller.common.SmallerException;
 import de.matrixweb.smaller.common.Task;
 import de.matrixweb.smaller.common.Version;
 import de.matrixweb.smaller.dev.server.templates.Engine;
@@ -82,7 +83,8 @@ public class SmallerResourceHandler {
         this.task = new Task(this.config.getProcessors(), StringUtils.join(
             this.config.getIn(), ','), StringUtils.join(
             this.config.getProcess(), ','));
-        this.task.setOptionsDefinition("global:source-maps=true");
+        this.task
+            .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
       }
       this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
           this.vfs);
@@ -120,8 +122,12 @@ public class SmallerResourceHandler {
     }
     if (remaining == null || remaining.size() > 0) {
       if (this.task != null) {
-        this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
-            this.resolver, this.task);
+        try {
+          this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
+              this.resolver, this.task);
+        } catch (final SmallerException e) {
+          LOGGER.error("Failed to process resources", e);
+        }
       }
     }
     LiveReloadSocket.broadcastReload();

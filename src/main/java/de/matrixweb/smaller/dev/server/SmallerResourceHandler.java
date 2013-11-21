@@ -28,6 +28,8 @@ import de.matrixweb.smaller.common.Task;
 import de.matrixweb.smaller.common.Version;
 import de.matrixweb.smaller.dev.server.templates.Engine;
 import de.matrixweb.smaller.dev.server.templates.TemplateEngine;
+import de.matrixweb.smaller.dev.server.tests.TestFramework;
+import de.matrixweb.smaller.dev.server.tests.TestRunner;
 import de.matrixweb.smaller.pipeline.Pipeline;
 import de.matrixweb.smaller.resource.ProcessorFactory;
 import de.matrixweb.smaller.resource.ResourceResolver;
@@ -39,6 +41,7 @@ import de.matrixweb.vfs.VFile;
 import de.matrixweb.vfs.wrapped.JavaFile;
 import de.matrixweb.vfs.wrapped.MergingVFS;
 import de.matrixweb.vfs.wrapped.WrappedSystem;
+import de.matrixweb.vfs.wrapped.WrappedVFS;
 
 /**
  * @author markusw
@@ -66,6 +69,8 @@ public class SmallerResourceHandler {
 
   private String liveReloadClient = null;
 
+  private TestRunner testRunner;
+
   /**
    * @param config
    * @throws IOException
@@ -88,6 +93,7 @@ public class SmallerResourceHandler {
       }
       this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
           this.vfs);
+      this.testRunner = TestFramework.get(config.getTestFramework()).create();
 
       smallerResources(null);
     } catch (IOException | RuntimeException e) {
@@ -105,6 +111,7 @@ public class SmallerResourceHandler {
   }
 
   void smallerResources(final List<String> changedResources) {
+    LOGGER.debug("Changed resources: {}", changedResources);
     List<String> remaining = null;
     if (changedResources != null) {
       remaining = new ArrayList<>(changedResources);
@@ -121,10 +128,30 @@ public class SmallerResourceHandler {
       }
     }
     if (remaining == null || remaining.size() > 0) {
+      // TODO: Check if test-resources was changed
+      // => rebuild test resources
+      // => rerun tests
+      // otherwise:
+      // => rerun whole stack
       if (this.task != null) {
         try {
+          // this.vfs.compact();
           this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
               this.resolver, this.task);
+
+          if (this.config.getTestFolder() != null) {
+            final VFS testVfs = new VFS();
+            try {
+              testVfs.mount(testVfs.find("/"), new MergingVFS(new WrappedVFS(
+                  this.vfs.find("/")),
+                  new JavaFile(this.config.getTestFolder())));
+              this.testRunner.run(testVfs);
+            } catch (final IOException e) {
+              LOGGER.error("Failed to execute tests", e);
+            } finally {
+              testVfs.dispose();
+            }
+          }
         } catch (final SmallerException e) {
           LOGGER.error("Failed to process resources", e);
         }
@@ -245,6 +272,9 @@ public class SmallerResourceHandler {
     }
     if (this.vfs != null) {
       this.vfs.dispose();
+    }
+    if (this.testRunner != null) {
+      this.testRunner.dispose();
     }
   }
 

@@ -20,10 +20,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author markusw
  */
 public class ResourceWatchdog {
+
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(ResourceWatchdog.class);
 
   private final SmallerResourceHandler resourceHandler;
 
@@ -55,9 +61,14 @@ public class ResourceWatchdog {
     this.watchService = FileSystems.getDefault().newWatchService();
     this.watches = new HashMap<WatchKey, Path>();
     for (final File root : config.getDocumentRoots()) {
+      LOGGER.debug("Watching {}", root);
       watchRecursive(Paths.get(root.getPath()));
     }
-    final Thread thread = new Thread(this.watchdog);
+    if (config.getTestFolder() != null) {
+      LOGGER.debug("Watching {}", config.getTestFolder());
+      watchRecursive(Paths.get(config.getTestFolder().getPath()));
+    }
+    final Thread thread = new Thread(this.watchdog, "Smaller Resource Watchdog");
     thread.setDaemon(true);
     thread.start();
   }
@@ -116,6 +127,7 @@ public class ResourceWatchdog {
       }
       final WatchEvent<Path> ev = cast(event);
       final Path child = path.resolve(ev.context());
+      LOGGER.debug("WatchEvent for {}", child);
       findResourceRoot(changedResources, child);
       watchNewDirectories(kind, child);
     }
@@ -129,6 +141,12 @@ public class ResourceWatchdog {
       if (child.startsWith(root.getPath())) {
         changedResources.add(child.toFile().getPath()
             .substring(root.getPath().length()));
+      }
+    }
+    if (this.config.getTestFolder() != null) {
+      if (child.startsWith(this.config.getTestFolder().getPath())) {
+        changedResources.add(child.toFile().getPath()
+            .substring(this.config.getTestFolder().getPath().length()));
       }
     }
   }

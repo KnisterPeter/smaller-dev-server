@@ -7,7 +7,7 @@
   </appender>
 
   <logger name="org.apache" level="INFO" />
-  <logger name="de.matrixweb.smaller" level="INFO" />
+  <logger name="de.matrixweb" level="INFO" />
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

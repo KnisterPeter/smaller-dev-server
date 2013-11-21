@@ -2,6 +2,7 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.Locale;
 
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
 
 /**
  * @author markusw
@@ -46,9 +48,13 @@ public class Main {
       return;
     }
 
-    this.logger = (Logger) LoggerFactory.getLogger(Main.class);
+    System.setProperty("logback.configurationFile", "logback-dev-server.xml");
+    final LoggerContext loggerContext = (LoggerContext) LoggerFactory
+        .getILoggerFactory();
+    this.logger = loggerContext.getLogger("de.matrixweb");
     if (config.isDebug()) {
       this.logger.setLevel(Level.DEBUG);
+      this.logger.debug("Enabled verbose logging");
     }
 
     this.resourceHandler = new SmallerResourceHandler(config);
@@ -58,16 +64,19 @@ public class Main {
     final ServletContextHandler handler = new ServletContextHandler();
     handler.addServlet(new ServletHolder(servlet), "/");
     this.server.setHandler(handler);
-    this.server.start();
+    try {
+      this.server.start();
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        @Override
+        public void run() {
+          Main.this.stop();
+        }
+      });
 
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
-      public void run() {
-        Main.this.stop();
-      }
-    });
-
-    this.server.join();
+      this.server.join();
+    } catch (final BindException e) {
+      stop();
+    }
   }
 
   /**

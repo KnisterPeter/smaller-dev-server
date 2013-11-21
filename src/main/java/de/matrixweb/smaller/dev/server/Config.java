@@ -52,6 +52,13 @@ public class Config {
   @Option(name = "-l", aliases = { "--live-reload" }, usage = "Flag to enable live-reload feature")
   private boolean liveReload;
 
+  @Option(name = "--test-framework", usage = "The test framework to use. Could be one of:\n"
+      + "  jasmine - Runs jasmine specs (all files matching '*_spec.js'")
+  private String testFramework;
+
+  @Option(name = "--test-directory", usage = "The directory the tests are located")
+  private File testFolder;
+
   /**
    * @param parser
    * @throws CmdLineException
@@ -62,6 +69,10 @@ public class Config {
         && this.documentRoots == null) {
       throw new CmdLineException(parser,
           "--document-root is required if --process or --template-engine is given");
+    }
+    if (this.testFramework == null ^ this.testFolder == null) {
+      throw new CmdLineException(parser,
+          "--test-framework and --test-directory are required; only one is given");
     }
   }
 
@@ -243,6 +254,36 @@ public class Config {
    */
   public void setLiveReload(final boolean liveReload) {
     this.liveReload = liveReload;
+  }
+
+  /**
+   * @return the testFramework
+   */
+  public String getTestFramework() {
+    return this.testFramework;
+  }
+
+  /**
+   * @param testFramework
+   *          the testFramework to set
+   */
+  public void setTestFramework(final String testFramework) {
+    this.testFramework = testFramework;
+  }
+
+  /**
+   * @return the testFolder
+   */
+  public File getTestFolder() {
+    return this.testFolder;
+  }
+
+  /**
+   * @param testFolder
+   *          the testFolder to set
+   */
+  public void setTestFolder(final File testFolder) {
+    this.testFolder = testFolder;
   }
 
 }

@@ -93,6 +93,7 @@ public class Servlet extends WebSocketServlet {
       final HttpServletResponse response) throws IOException {
     try {
       final String uri = request.getRequestURI();
+      LOGGER.debug("Requested uri: {}", uri);
       if (this.config.getProcess() != null
           && this.config.getProcess().contains(uri)) {
         // TODO: Allow wildcard uris

@@ -6,11 +6,15 @@ import java.util.List;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author markusw
  */
 public class Config {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
 
   @Option(name = "-h", aliases = { "--help" }, usage = "This screen")
   private boolean help = false;
@@ -73,6 +77,10 @@ public class Config {
     if (this.testFramework == null ^ this.testFolder == null) {
       throw new CmdLineException(parser,
           "--test-framework and --test-directory are required; only one is given");
+    }
+    if (this.processors == null ^ this.in == null) {
+      LOGGER
+          .warn("\n\n*** Defined processors or input files but not both. This will result in strange behaviour! ***\n");
     }
   }
 

@@ -125,6 +125,17 @@
       <artifactId>lanterna</artifactId>
       <version>2.1.5</version>
     </dependency>
+    <dependency>
+      <groupId>io.restx</groupId>
+      <artifactId>restx-barbarywatch</artifactId>
+      <version>0.30</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>restx-common</artifactId>
+          <groupId>io.restx</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>

@@ -14,12 +14,16 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.nio.file.Watchable;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.collections.ListUtils;
+import org.apache.commons.collections.Transformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +62,7 @@ public class ResourceWatchdog {
       final Config config) throws IOException {
     this.resourceHandler = resourceHandler;
     this.config = config;
-    this.watchService = FileSystems.getDefault().newWatchService();
+    this.watchService = createWatchService();
     this.watches = new HashMap<WatchKey, Path>();
     for (final File root : config.getDocumentRoots()) {
       LOGGER.debug("Watching {}", root);
@@ -71,6 +75,14 @@ public class ResourceWatchdog {
     final Thread thread = new Thread(this.watchdog, "Smaller Resource Watchdog");
     thread.setDaemon(true);
     thread.start();
+  }
+
+  private WatchService createWatchService() throws IOException {
+    final String osName = System.getProperty("os.name");
+    if (osName.startsWith("Mac OS X") || osName.startsWith("Darwin")) {
+      return new MacWatchService();
+    }
+    return FileSystems.getDefault().newWatchService();
   }
 
   private void watchRecursive(final Path dir) throws IOException {
@@ -167,6 +179,173 @@ public class ResourceWatchdog {
   void stop() throws IOException {
     this.runWatchdog = false;
     this.watchService.close();
+  }
+
+  private static class MacWatchService implements WatchService {
+
+    private final com.barbarysoftware.watchservice.WatchService ws = com.barbarysoftware.watchservice.WatchService
+        .newWatchService();
+
+    /**
+     * @see java.nio.file.WatchService#poll()
+     */
+    @Override
+    public WatchKey poll() {
+      return new MacWatchKey(this.ws.poll());
+    }
+
+    /**
+     * @see java.nio.file.WatchService#poll(long, java.util.concurrent.TimeUnit)
+     */
+    @Override
+    public WatchKey poll(final long timeout, final TimeUnit unit)
+        throws InterruptedException {
+      return new MacWatchKey(this.ws.poll(timeout, unit));
+    }
+
+    /**
+     * @see java.nio.file.WatchService#take()
+     */
+    @Override
+    public WatchKey take() throws InterruptedException {
+      return new MacWatchKey(this.ws.take());
+    }
+
+    /**
+     * @see java.nio.file.WatchService#close()
+     */
+    @Override
+    public void close() throws IOException {
+      this.ws.close();
+    }
+
+    private class MacWatchKey implements WatchKey {
+
+      private final com.barbarysoftware.watchservice.WatchKey key;
+
+      /**
+       * @param key
+       */
+      public MacWatchKey(final com.barbarysoftware.watchservice.WatchKey key) {
+        this.key = key;
+      }
+
+      /**
+       * @see java.nio.file.WatchKey#watchable()
+       */
+      @Override
+      public Watchable watchable() {
+        throw new UnsupportedOperationException();
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public List<WatchEvent<?>> pollEvents() {
+        final List<com.barbarysoftware.watchservice.WatchEvent<?>> events = this.key
+            .pollEvents();
+        return ListUtils.transformedList(events, new Transformer() {
+          @Override
+          public Object transform(final Object input) {
+            return new MacWatchEvent<>(
+                (com.barbarysoftware.watchservice.WatchEvent<?>) input);
+          }
+        });
+      }
+
+      /**
+       * @see java.nio.file.WatchKey#isValid()
+       */
+      @Override
+      public boolean isValid() {
+        return this.key.isValid();
+      }
+
+      /**
+       * @see java.nio.file.WatchKey#cancel()
+       */
+      @Override
+      public void cancel() {
+        this.key.cancel();
+      }
+
+      /**
+       * @see java.nio.file.WatchKey#reset()
+       */
+      @Override
+      public boolean reset() {
+        return this.key.reset();
+      }
+
+    }
+
+    private class MacWatchEvent<TE> implements WatchEvent<TE> {
+
+      private final com.barbarysoftware.watchservice.WatchEvent<TE> event;
+
+      /**
+       * @param event
+       */
+      public MacWatchEvent(
+          final com.barbarysoftware.watchservice.WatchEvent<TE> event) {
+        this.event = event;
+      }
+
+      /**
+       * @see java.nio.file.WatchEvent#kind()
+       */
+      @Override
+      public Kind<TE> kind() {
+        return new MacKind<>(this.event.kind());
+      }
+
+      /**
+       * @see java.nio.file.WatchEvent#count()
+       */
+      @Override
+      public int count() {
+        return this.event.count();
+      }
+
+      /**
+       * @see java.nio.file.WatchEvent#context()
+       */
+      @Override
+      public TE context() {
+        return this.event.context();
+      }
+
+      private class MacKind<TK> implements Kind<TK> {
+
+        private final com.barbarysoftware.watchservice.WatchEvent.Kind<TK> kind;
+
+        /**
+         * @param kind
+         */
+        public MacKind(
+            final com.barbarysoftware.watchservice.WatchEvent.Kind<TK> kind) {
+          this.kind = kind;
+        }
+
+        /**
+         * @see java.nio.file.WatchEvent.Kind#name()
+         */
+        @Override
+        public String name() {
+          return this.kind.name();
+        }
+
+        /**
+         * @see java.nio.file.WatchEvent.Kind#type()
+         */
+        @Override
+        public Class<TK> type() {
+          return this.kind.type();
+        }
+
+      }
+
+    }
+
   }
 
 }

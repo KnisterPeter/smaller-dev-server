@@ -1,7 +1,9 @@
 package de.matrixweb.smaller.dev.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -91,20 +93,25 @@ public class Servlet extends WebSocketServlet {
 
   private void handleHttpRequest(final HttpServletRequest request,
       final HttpServletResponse response) throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
       final String uri = request.getRequestURI();
       LOGGER.debug("Requested uri: {}", uri);
       if (this.config.getProcess() != null
           && this.config.getProcess().contains(uri)) {
         // TODO: Allow wildcard uris
-        this.resourceHandler.process(response, uri);
+        this.resourceHandler.process(baos, response, uri);
       } else {
         try {
-          handleProxyRequest(request, response, uri);
+          handleProxyRequest(baos, request, response, uri);
         } catch (final IOException e) {
+          LOGGER.warn("Unable to proxy request", e);
+          // TODO: IOException is not the right one => only render template if
+          // 404 is given from proxy or proxy is not available
           try {
-            this.resourceHandler.renderTemplate(request, response, uri);
+            this.resourceHandler.renderTemplate(baos, request, response, uri);
           } catch (final IOException e2) {
+            LOGGER.error("Failed to render template", e2);
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
           }
         }
@@ -112,16 +119,20 @@ public class Servlet extends WebSocketServlet {
     } catch (final Exception e) {
       LOGGER.error("Failed to handle request", e);
       response.setContentType("text/html");
-      final PrintWriter writer = response.getWriter();
+      final PrintWriter writer = new PrintWriter(baos);
       writer.write("<html><body><pre>");
       e.printStackTrace(writer);
       writer.write("</pre></body></html>");
-      writer.close();
+      writer.flush();
+    }
+    try (ServletOutputStream out = response.getOutputStream()) {
+      out.write(baos.toByteArray());
     }
   }
 
-  private void handleProxyRequest(final HttpServletRequest request,
-      final HttpServletResponse response, final String uri) throws IOException {
+  private void handleProxyRequest(final OutputStream out,
+      final HttpServletRequest request, final HttpServletResponse response,
+      final String uri) throws IOException {
     final String path = uri
         + (request.getQueryString() != null ? "?" + request.getQueryString()
             : "");
@@ -132,7 +143,8 @@ public class Servlet extends WebSocketServlet {
               final Header[] headers, final HttpEntity entity,
               final ContentType contentType, final Charset charset)
               throws IOException {
-            handleResponse(statusLine, response, headers, entity, contentType);
+            handleResponse(out, statusLine, response, headers, entity,
+                contentType);
           }
         });
   }
@@ -170,13 +182,14 @@ public class Servlet extends WebSocketServlet {
     return clientRequest;
   }
 
-  private void handleResponse(final StatusLine statusLine,
-      final HttpServletResponse response, final Header[] headers,
-      final HttpEntity entity, final ContentType contentType)
-      throws IOException {
+  private void handleResponse(final OutputStream out,
+      final StatusLine statusLine, final HttpServletResponse response,
+      final Header[] headers, final HttpEntity entity,
+      final ContentType contentType) throws IOException {
     response.setStatus(statusLine.getStatusCode());
 
-    final List<String> skipHeaders = Arrays.asList("Connection");
+    final List<String> skipHeaders = Arrays.asList("Connection",
+        "Content-Length");
     for (final Header header : headers) {
       if (!skipHeaders.contains(header.getName())) {
         LOGGER.debug("Add response header: " + header.getName() + ":"
@@ -186,17 +199,15 @@ public class Servlet extends WebSocketServlet {
     }
 
     if (entity != null) {
-      final InputStream in = entity.getContent();
-      try {
-        final ServletOutputStream out = response.getOutputStream();
+      LOGGER.debug("Send proxy response");
+      try (InputStream in = entity.getContent()) {
         IOUtils.copy(in, out);
         if (this.config.isLiveReload()
             && "text/html".equals(contentType.getMimeType())) {
-          out.print(this.resourceHandler.getLiveReloadClient());
+          LOGGER.debug("Injecting live-reload snippet");
+          out.write(this.resourceHandler.getLiveReloadClient()
+              .getBytes("UTF-8"));
         }
-        out.close();
-      } finally {
-        in.close();
       }
     }
   }

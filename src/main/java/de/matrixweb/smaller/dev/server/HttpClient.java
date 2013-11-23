@@ -102,6 +102,8 @@ public class HttpClient {
           } else {
             super.process(request, context);
           }
+          LOGGER.debug("Send Host header: {}",
+              request.getHeaders(HTTP.TARGET_HOST));
         }
       }
     });

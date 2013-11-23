@@ -3,6 +3,7 @@ package de.matrixweb.smaller.dev.server;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -161,36 +162,39 @@ public class SmallerResourceHandler {
   }
 
   /**
+   * @param out
    * @param response
    * @param uri
    * @throws IOException
    */
-  public void process(final HttpServletResponse response, final String uri)
-      throws IOException {
+  public void process(final OutputStream out,
+      final HttpServletResponse response, final String uri) throws IOException {
     if (uri.endsWith("js")) {
       response.setContentType("application/javascript");
     } else if (uri.endsWith("css")) {
       response.setContentType("text/css");
     }
-    final PrintWriter writer = response.getWriter();
+    final PrintWriter writer = new PrintWriter(out);
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
-    writer.close();
+    writer.flush();
   }
 
   /**
+   * @param out
    * @param request
    * @param response
    * @param uri
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public void renderTemplate(final HttpServletRequest request,
-      final HttpServletResponse response, final String uri) throws IOException {
+  public void renderTemplate(final OutputStream out,
+      final HttpServletRequest request, final HttpServletResponse response,
+      final String uri) throws IOException {
     String path = uri;
     if ("/".equals(path)) {
       path += "index.html";
     }
-    final PrintWriter writer = response.getWriter();
+    final PrintWriter writer = new PrintWriter(out);
     final Map<String, Object> data = readJsonData(path, request);
     if (data.containsKey("jsonResponse")) {
       response.setContentType("application/json");
@@ -206,7 +210,7 @@ public class SmallerResourceHandler {
         writer.write(getLiveReloadClient());
       }
     }
-    writer.close();
+    writer.flush();
   }
 
   /**

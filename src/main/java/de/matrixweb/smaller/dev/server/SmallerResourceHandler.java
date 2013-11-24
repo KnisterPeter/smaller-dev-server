@@ -202,6 +202,11 @@ public class SmallerResourceHandler {
       writer.write(new ObjectMapper().writeValueAsString(data
           .get("jsonResponse")));
     } else {
+      String contentType = "text/html";
+      if (data.containsKey("contentType")) {
+        contentType = data.get("contentType").toString();
+      }
+      response.addHeader("Content-Type", contentType);
       if (data.containsKey("templatePath")) {
         path = data.get("templatePath").toString();
       }

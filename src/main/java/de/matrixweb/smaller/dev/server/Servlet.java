@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.ConnectException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -104,16 +105,13 @@ public class Servlet extends WebSocketServlet {
       } else {
         try {
           handleProxyRequest(baos, request, response, uri);
+        } catch (final ConnectException e) {
+          tryTemplateRendering(baos, request, response, uri);
         } catch (final IOException e) {
           LOGGER.warn("Unable to proxy request", e);
           // TODO: IOException is not the right one => only render template if
           // 404 is given from proxy or proxy is not available
-          try {
-            this.resourceHandler.renderTemplate(baos, request, response, uri);
-          } catch (final IOException e2) {
-            LOGGER.error("Failed to render template", e2);
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-          }
+          tryTemplateRendering(baos, request, response, uri);
         }
       }
     } catch (final Exception e) {
@@ -127,6 +125,17 @@ public class Servlet extends WebSocketServlet {
     }
     try (ServletOutputStream out = response.getOutputStream()) {
       out.write(baos.toByteArray());
+    }
+  }
+
+  private void tryTemplateRendering(final OutputStream out,
+      final HttpServletRequest request, final HttpServletResponse response,
+      final String uri) throws IOException {
+    try {
+      this.resourceHandler.renderTemplate(out, request, response, uri);
+    } catch (final IOException e) {
+      LOGGER.error("Failed to render template", e);
+      response.sendError(HttpServletResponse.SC_NOT_FOUND);
     }
   }
 

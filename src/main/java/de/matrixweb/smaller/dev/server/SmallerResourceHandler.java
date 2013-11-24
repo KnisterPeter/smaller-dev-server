@@ -174,6 +174,7 @@ public class SmallerResourceHandler {
     } else if (uri.endsWith("css")) {
       response.setContentType("text/css");
     }
+    response.addHeader("Pragma", "no-cache");
     final PrintWriter writer = new PrintWriter(out);
     writer.write(VFSUtils.readToString(this.vfs.find(uri)));
     writer.flush();

@@ -1,0 +1,17 @@
+{
+  "opType=search": {
+    "templateData": {
+      "name": "NEW-MENU"
+    },
+    "partials": {
+      "#metanav": {
+        "mode": "appendChild",
+        "partial" : "/de/de/damen/schuhe/winterstiefel-cinzia-in-grau/p/newpartial.hbs"
+      },
+      "#sidebar h1[itemprop=name]": {
+        "mode": "replace",
+        "partial" : "/de/de/damen/schuhe/winterstiefel-cinzia-in-grau/p/name.hbs"
+      }
+    }
+  }
+}

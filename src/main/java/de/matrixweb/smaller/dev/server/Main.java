@@ -62,6 +62,8 @@ public class Main {
     if (config.isDebug()) {
       this.logger.setLevel(Level.DEBUG);
       this.logger.debug("Enabled verbose logging");
+    } else {
+      loggerContext.getLogger("de.matrixweb.smaller").setLevel(Level.INFO);
     }
 
     this.resourceHandler = new SmallerResourceHandler(config);
@@ -165,7 +167,11 @@ public class Main {
           result.add("--in");
           result.add(in);
         }
+        if (config.getDevServer().isInjectPartials()) {
+          result.add("--inject-partials");
+        }
 
+        // TODO: Configuration
         // config.getTasks();
       } else {
         result.add(arg);

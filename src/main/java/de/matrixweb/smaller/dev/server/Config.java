@@ -63,6 +63,9 @@ public class Config {
   @Option(name = "--test-directory", usage = "The directory the tests are located")
   private File testFolder;
 
+  @Option(name = "--inject-partials", usage = "This enables the injection of partials in proxied pages; Could slowdown the proxy process")
+  private boolean injectPartials = false;
+
   /**
    * @param parser
    * @throws CmdLineException
@@ -292,6 +295,21 @@ public class Config {
    */
   public void setTestFolder(final File testFolder) {
     this.testFolder = testFolder;
+  }
+
+  /**
+   * @return the injectPartials
+   */
+  public boolean isInjectPartials() {
+    return this.injectPartials;
+  }
+
+  /**
+   * @param injectPartials
+   *          the injectPartials to set
+   */
+  public void setInjectPartials(final boolean injectPartials) {
+    this.injectPartials = injectPartials;
   }
 
 }

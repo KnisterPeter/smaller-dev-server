@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -72,6 +73,8 @@ public class SmallerResourceHandler {
 
   private TestRunner testRunner;
 
+  private final Map<String, Map<String, Object>> configCache = new HashMap<>();
+
   /**
    * @param config
    * @throws IOException
@@ -113,20 +116,13 @@ public class SmallerResourceHandler {
 
   void smallerResources(final List<String> changedResources) {
     LOGGER.debug("Changed resources: {}", changedResources);
+
+    // TODO: Check if configs was changed and only remove the stale keys
+    this.configCache.clear();
+
     List<String> remaining = null;
     if (changedResources != null) {
-      remaining = new ArrayList<>(changedResources);
-      final Iterator<String> it = remaining.iterator();
-      while (it.hasNext()) {
-        final String path = it.next();
-        try {
-          if (this.templateEngine.compile(path)) {
-            it.remove();
-          }
-        } catch (final IOException e) {
-          LOGGER.warn("Failed to compile template: " + path, e);
-        }
-      }
+      remaining = recompileTemplates(changedResources);
     }
     if (remaining == null || remaining.size() > 0) {
       // TODO: Check if test-resources was changed
@@ -136,7 +132,6 @@ public class SmallerResourceHandler {
       // => rerun whole stack
       if (this.task != null) {
         try {
-          // this.vfs.compact();
           this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
               this.resolver, this.task);
 
@@ -159,6 +154,23 @@ public class SmallerResourceHandler {
       }
     }
     LiveReloadSocket.broadcastReload();
+  }
+
+  private final List<String> recompileTemplates(
+      final List<String> changedResources) {
+    final List<String> remaining = new ArrayList<>(changedResources);
+    final Iterator<String> it = remaining.iterator();
+    while (it.hasNext()) {
+      final String path = it.next();
+      try {
+        if (this.templateEngine.compile(path)) {
+          it.remove();
+        }
+      } catch (final IOException e) {
+        LOGGER.warn("Failed to compile template: " + path, e);
+      }
+    }
+    return remaining;
   }
 
   /**
@@ -187,7 +199,6 @@ public class SmallerResourceHandler {
    * @param uri
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public void renderTemplate(final OutputStream out,
       final HttpServletRequest request, final HttpServletResponse response,
       final String uri) throws IOException {
@@ -195,10 +206,30 @@ public class SmallerResourceHandler {
     if ("/".equals(path)) {
       path += "index.html";
     }
+    final Map<String, Object> data = loadRequestConfiguration(path, request);
+    renderTemplate(out, request, response, path, data, false);
+  }
+
+  /**
+   * @param out
+   * @param request
+   * @param response
+   * @param uri
+   * @param data
+   * @param partial
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public void renderTemplate(final OutputStream out,
+      final HttpServletRequest request, final HttpServletResponse response,
+      final String uri, final Map<String, Object> data, final boolean partial)
+      throws IOException {
+    String path = uri;
     final PrintWriter writer = new PrintWriter(out);
-    final Map<String, Object> data = readJsonData(path, request);
     if (data.containsKey("jsonResponse")) {
-      response.setContentType("application/json");
+      if (response != null) {
+        response.setContentType("application/json");
+      }
       writer.write(new ObjectMapper().writeValueAsString(data
           .get("jsonResponse")));
     } else {
@@ -206,13 +237,15 @@ public class SmallerResourceHandler {
       if (data.containsKey("contentType")) {
         contentType = data.get("contentType").toString();
       }
-      response.addHeader("Content-Type", contentType);
+      if (response != null) {
+        response.addHeader("Content-Type", contentType);
+      }
       if (data.containsKey("templatePath")) {
         path = data.get("templatePath").toString();
       }
       writer.write(this.templateEngine.render(path, data,
           (Map<String, Object>) data.get("templateData")));
-      if (this.config.isLiveReload()) {
+      if (!partial && this.config.isLiveReload()) {
         writer.write(getLiveReloadClient());
       }
     }
@@ -239,15 +272,34 @@ public class SmallerResourceHandler {
     return this.liveReloadClient;
   }
 
+  /**
+   * @param path
+   *          The uri to load a configuration for
+   * @param request
+   *          The incomming http request
+   * @return Returns a configuration map for the given parameters
+   * @throws IOException
+   */
   @SuppressWarnings("unchecked")
-  private Map<String, Object> readJsonData(final String path,
+  public Map<String, Object> loadRequestConfiguration(final String path,
       final HttpServletRequest request) throws IOException {
-    Map<String, Object> o = null;
-    final VFile file = this.vfs.find(path + ".cfg.json");
-    if (file.exists()) {
-      final Map<String, Object> data = new ObjectMapper().readValue(
-          file.getURL(), Map.class);
-      o = (Map<String, Object>) data.get(createRequestParamKey(request));
+    Map<String, Object> o = this.configCache.get(path);
+    if (o == null) {
+      final VFile file = this.vfs.find(path + ".cfg.json");
+      if (file.exists()) {
+        o = new ObjectMapper().readValue(file.getURL(), Map.class);
+        final Map<String, Object> target = new HashMap<>();
+        for (final String params : o.keySet()) {
+          target.put(createRequestParamKey(buildRequestParameterMap(params)),
+              o.get(params));
+        }
+        o = target;
+        this.configCache.put(path, o);
+      }
+    }
+    if (o != null) {
+      o = (Map<String, Object>) o.get(createRequestParamKey(request
+          .getParameterMap()));
     }
     if (o == null) {
       o = new HashMap<>();
@@ -255,15 +307,33 @@ public class SmallerResourceHandler {
     return o;
   }
 
-  private String createRequestParamKey(final HttpServletRequest request)
+  private Map<String, String[]> buildRequestParameterMap(final String params) {
+    final Map<String, List<String>> temp = new HashMap<>();
+    for (final String param : params.split("&")) {
+      if (!"".equals(param)) {
+        final String[] parts = param.split("=", 2);
+        if (!temp.containsKey(parts[0])) {
+          temp.put(parts[0], new ArrayList<String>());
+        }
+        temp.get(parts[0]).add(parts[1]);
+      }
+    }
+    final Map<String, String[]> parameters = new HashMap<>();
+    for (final Entry<String, List<String>> entry : temp.entrySet()) {
+      parameters.put(entry.getKey(),
+          entry.getValue().toArray(new String[entry.getValue().size()]));
+    }
+    return parameters;
+  }
+
+  private String createRequestParamKey(final Map<String, String[]> parameters)
       throws IOException {
     final List<String> parts = new ArrayList<>();
 
-    final List<String> names = new ArrayList<>(request.getParameterMap()
-        .keySet());
+    final List<String> names = new ArrayList<>(parameters.keySet());
     Collections.sort(names);
     for (final String name : names) {
-      final String[] values = request.getParameterValues(name);
+      final String[] values = parameters.get(name);
       if (values.length > 1) {
         Arrays.sort(values);
         for (final String value : values) {

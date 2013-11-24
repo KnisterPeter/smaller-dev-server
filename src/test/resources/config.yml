@@ -10,6 +10,7 @@ dev-server:
     tests:
         framework: jasmine
         folder: "../src/test/resources/tests/jasmine"
+    inject-partials: true
 files:
     folder:
         - "../src/test/resources/fldr1"

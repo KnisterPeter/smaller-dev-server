@@ -5,11 +5,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -28,6 +31,9 @@ import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,7 +157,7 @@ public class Servlet extends WebSocketServlet {
               final ContentType contentType, final Charset charset)
               throws IOException {
             handleResponse(out, statusLine, response, headers, entity,
-                contentType);
+                contentType, request, uri);
           }
         });
   }
@@ -192,7 +198,8 @@ public class Servlet extends WebSocketServlet {
   private void handleResponse(final OutputStream out,
       final StatusLine statusLine, final HttpServletResponse response,
       final Header[] headers, final HttpEntity entity,
-      final ContentType contentType) throws IOException {
+      final ContentType contentType, final HttpServletRequest request,
+      final String uri) throws IOException {
     // TODO: Make this configurable?
     if (statusLine.getStatusCode() == 404) {
       throw new PageNotFoundException();
@@ -210,14 +217,51 @@ public class Servlet extends WebSocketServlet {
     }
 
     if (entity != null) {
-      LOGGER.debug("Send proxy response");
       try (InputStream in = entity.getContent()) {
-        IOUtils.copy(in, out);
+        if (this.config.isInjectPartials() && contentType != null
+            && "text/html".equals(contentType.getMimeType())) {
+          final Document doc = Jsoup.parse(IOUtils.toString(in));
+          injectPartials(doc, uri, request);
+          out.write(doc.toString().getBytes("UTF-8"));
+        } else {
+          LOGGER.debug("Send proxy response");
+          IOUtils.copy(in, out);
+        }
         if (this.config.isLiveReload() && contentType != null
             && "text/html".equals(contentType.getMimeType())) {
           LOGGER.debug("Injecting live-reload snippet");
           out.write(this.resourceHandler.getLiveReloadClient()
               .getBytes("UTF-8"));
+        }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void injectPartials(final Document doc, final String uri,
+      final HttpServletRequest request) throws IOException,
+      UnsupportedEncodingException {
+    LOGGER.info("Injecting partials for uri: {}", uri);
+    final Map<String, Object> data = this.resourceHandler
+        .loadRequestConfiguration(uri, request);
+    if (data.containsKey("partials")) {
+      final Map<String, Object> partials = (Map<String, Object>) data
+          .get("partials");
+      for (final Entry<String, Object> partial : partials.entrySet()) {
+        final Map<String, String> partialConfig = (Map<String, String>) partial
+            .getValue();
+        for (final Element el : doc.select(partial.getKey())) {
+          final ByteArrayOutputStream capture = new ByteArrayOutputStream();
+          this.resourceHandler.renderTemplate(capture, request, null,
+              partialConfig.get("partial"), data, true);
+          if ("appendChild".equals(partialConfig.get("mode"))) {
+            el.append(capture.toString("UTF-8"));
+          } else if ("prependChild".equals(partialConfig.get("mode"))) {
+            el.prepend(capture.toString("UTF-8"));
+          } else if ("replace".equals(partialConfig.get("mode"))) {
+            el.replaceWith(Jsoup.parseBodyFragment(capture.toString("UTF-8"))
+                .select("body *").first());
+          }
         }
       }
     }
@@ -236,6 +280,9 @@ public class Servlet extends WebSocketServlet {
   }
 
   static class PageNotFoundException extends RuntimeException {
+
+    private static final long serialVersionUID = -6875816786862210687L;
+
   }
 
 }

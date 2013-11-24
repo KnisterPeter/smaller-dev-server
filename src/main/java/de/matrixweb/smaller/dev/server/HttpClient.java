@@ -201,7 +201,9 @@ public class HttpClient {
     Charset charset = HTTP.DEF_CONTENT_CHARSET;
     if (entity != null) {
       ct = ContentType.get(entity);
-      charset = ct.getCharset();
+      if (ct != null) {
+        charset = ct.getCharset();
+      }
       if (charset == null) {
         charset = HTTP.DEF_CONTENT_CHARSET;
       }

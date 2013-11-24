@@ -211,7 +211,7 @@ public class Servlet extends WebSocketServlet {
       LOGGER.debug("Send proxy response");
       try (InputStream in = entity.getContent()) {
         IOUtils.copy(in, out);
-        if (this.config.isLiveReload()
+        if (this.config.isLiveReload() && contentType != null
             && "text/html".equals(contentType.getMimeType())) {
           LOGGER.debug("Injecting live-reload snippet");
           out.write(this.resourceHandler.getLiveReloadClient()

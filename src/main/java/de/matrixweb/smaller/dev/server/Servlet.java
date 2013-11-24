@@ -105,12 +105,10 @@ public class Servlet extends WebSocketServlet {
       } else {
         try {
           handleProxyRequest(baos, request, response, uri);
-        } catch (final ConnectException e) {
+        } catch (final ConnectException | PageNotFoundException e) {
           tryTemplateRendering(baos, request, response, uri);
         } catch (final IOException e) {
           LOGGER.warn("Unable to proxy request", e);
-          // TODO: IOException is not the right one => only render template if
-          // 404 is given from proxy or proxy is not available
           tryTemplateRendering(baos, request, response, uri);
         }
       }
@@ -195,6 +193,10 @@ public class Servlet extends WebSocketServlet {
       final StatusLine statusLine, final HttpServletResponse response,
       final Header[] headers, final HttpEntity entity,
       final ContentType contentType) throws IOException {
+    // TODO: Make this configurable?
+    if (statusLine.getStatusCode() == 404) {
+      throw new PageNotFoundException();
+    }
     response.setStatus(statusLine.getStatusCode());
 
     final List<String> skipHeaders = Arrays.asList("Connection",
@@ -231,6 +233,9 @@ public class Servlet extends WebSocketServlet {
     }
     LiveReloadSocket.stop();
     super.destroy();
+  }
+
+  static class PageNotFoundException extends RuntimeException {
   }
 
 }

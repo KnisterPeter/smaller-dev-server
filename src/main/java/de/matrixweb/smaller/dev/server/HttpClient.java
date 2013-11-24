@@ -39,6 +39,8 @@ import org.apache.http.protocol.RequestUserAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.matrixweb.smaller.dev.server.Servlet.PageNotFoundException;
+
 /**
  * @author markusw
  */
@@ -141,6 +143,8 @@ public class HttpClient {
           this.connPoll.returnObject(conn);
         }
       }
+    } catch (final PageNotFoundException e) {
+      throw e;
     } catch (final Exception e) {
       if (e instanceof IOException) {
         throw (IOException) e;

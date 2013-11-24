@@ -56,6 +56,9 @@ public class Config {
   @Option(name = "-l", aliases = { "--live-reload" }, usage = "Flag to enable live-reload feature")
   private boolean liveReload;
 
+  @Option(name = "--force-full-reload", usage = "Flag to force always full reload on resource changes; Defaults to true for compatibility")
+  private boolean forceFullReload = true;
+
   @Option(name = "--test-framework", usage = "The test framework to use. Could be one of:\n"
       + "  jasmine - Runs jasmine specs (all files matching '*_spec.js'")
   private String testFramework;
@@ -265,6 +268,21 @@ public class Config {
    */
   public void setLiveReload(final boolean liveReload) {
     this.liveReload = liveReload;
+  }
+
+  /**
+   * @return the forceFullReload
+   */
+  public boolean isForceFullReload() {
+    return this.forceFullReload;
+  }
+
+  /**
+   * @param forceFullReload
+   *          the forceFullReload to set
+   */
+  public void setForceFullReload(final boolean forceFullReload) {
+    this.forceFullReload = forceFullReload;
   }
 
   /**

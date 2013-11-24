@@ -7,6 +7,7 @@ dev-server:
         - "/style.css"
     templates: handlebars
     live-reload: true
+    force-full-reload: true
     tests:
         framework: jasmine
         folder: "../src/test/resources/tests/jasmine"

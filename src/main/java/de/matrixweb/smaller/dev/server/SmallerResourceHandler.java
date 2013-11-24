@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,14 +118,20 @@ public class SmallerResourceHandler {
   void smallerResources(final List<String> changedResources) {
     LOGGER.debug("Changed resources: {}", changedResources);
 
-    // TODO: Check if configs was changed and only remove the stale keys
-    this.configCache.clear();
-
-    List<String> remaining = null;
-    if (changedResources != null) {
-      remaining = recompileTemplates(changedResources);
+    final MutableBoolean fullReload = new MutableBoolean(
+        this.config.isForceFullReload());
+    String jsReload = null;
+    String cssReload = null;
+    @SuppressWarnings("unchecked")
+    List<String> remaining = changedResources != null ? new ArrayList<>(
+        changedResources) : Collections.EMPTY_LIST;
+    if (remaining.size() > 0) {
+      remaining = cleanupConfigCache(changedResources, fullReload);
     }
-    if (remaining == null || remaining.size() > 0) {
+    if (remaining.size() > 0) {
+      remaining = recompileTemplates(remaining, fullReload);
+    }
+    if (changedResources == null || remaining.size() > 0) {
       // TODO: Check if test-resources was changed
       // => rebuild test resources
       // => rerun tests
@@ -132,6 +139,8 @@ public class SmallerResourceHandler {
       // => rerun whole stack
       if (this.task != null) {
         try {
+          final long startUpdated = System.currentTimeMillis();
+
           this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
               this.resolver, this.task);
 
@@ -148,22 +157,57 @@ public class SmallerResourceHandler {
               testVfs.dispose();
             }
           }
+
+          try {
+            for (final String process : this.config.getProcess()) {
+              final long lastModified = this.vfs.find(process)
+                  .getLastModified();
+              if (lastModified > startUpdated) {
+                if (process.endsWith(".js")) {
+                  jsReload = process;
+                } else if (process.endsWith(".css")) {
+                  cssReload = process;
+                }
+              }
+            }
+          } catch (final IOException e) {
+            fullReload.setValue(true);
+          }
         } catch (final SmallerException e) {
           LOGGER.error("Failed to process resources", e);
         }
       }
     }
-    LiveReloadSocket.broadcastReload();
+    LiveReloadSocket.broadcastReload(fullReload.booleanValue(), jsReload,
+        cssReload);
+  }
+
+  private List<String> cleanupConfigCache(final List<String> changedResources,
+      final MutableBoolean reload) {
+    final List<String> remaining = new ArrayList<>(changedResources);
+    final Iterator<String> it = remaining.iterator();
+    while (it.hasNext()) {
+      final String change = it.next();
+      final String key = change.substring(0,
+          change.length() - ".cfg.json".length());
+      if (this.configCache.containsKey(key)) {
+        reload.setValue(true);
+        this.configCache.remove(key);
+        it.remove();
+      }
+    }
+    return remaining;
   }
 
   private final List<String> recompileTemplates(
-      final List<String> changedResources) {
+      final List<String> changedResources, final MutableBoolean reload) {
     final List<String> remaining = new ArrayList<>(changedResources);
     final Iterator<String> it = remaining.iterator();
     while (it.hasNext()) {
       final String path = it.next();
       try {
         if (this.templateEngine.compile(path)) {
+          reload.setValue(true);
           it.remove();
         }
       } catch (final IOException e) {

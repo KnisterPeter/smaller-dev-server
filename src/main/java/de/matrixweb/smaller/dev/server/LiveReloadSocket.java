@@ -2,8 +2,11 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +18,8 @@ public class LiveReloadSocket implements WebSocket.OnTextMessage {
 
   private static final Logger LOGGER = LoggerFactory
       .getLogger(LiveReloadSocket.class);
+
+  private static final ObjectMapper OM = new ObjectMapper();
 
   private static List<LiveReloadSocket> sockets = new ArrayList<>();
 
@@ -48,24 +53,40 @@ public class LiveReloadSocket implements WebSocket.OnTextMessage {
   }
 
   static void sendPing() {
-    for (final LiveReloadSocket socket : sockets) {
-      try {
-        socket.connection.sendMessage("ping");
-      } catch (final IOException e) {
-        LOGGER.error("Failed to send message to client", e);
-        socket.connection.disconnect();
-        sockets.remove(socket);
-      }
-    }
+    broadcastMessage(createMessage("ping", null));
   }
 
   /**
-   * 
+   * @param full
+   * @param js
+   * @param css
    */
-  public static void broadcastReload() {
+  public static void broadcastReload(final boolean full, final String js,
+      final String css) {
+    final Map<String, Object> map = new HashMap<>(3);
+    map.put("full", full);
+    map.put("js", js);
+    map.put("css", css);
+    broadcastMessage(createMessage("change", map));
+  }
+
+  private static String createMessage(final String kind, final Object data) {
+    String message;
+    try {
+      final Map<String, Object> map = new HashMap<>(2);
+      map.put("kind", kind);
+      map.put("data", data);
+      message = OM.writeValueAsString(map);
+    } catch (final IOException e1) {
+      message = "\"reload\"";
+    }
+    return message;
+  }
+
+  private static void broadcastMessage(final String message) {
     for (final LiveReloadSocket socket : sockets) {
       try {
-        socket.connection.sendMessage("reload");
+        socket.connection.sendMessage(message);
       } catch (final IOException e) {
         LOGGER.error("Failed to send message to client", e);
         socket.connection.disconnect();

@@ -92,6 +92,7 @@ public class Main {
    * 
    */
   public void stop() {
+    this.logger.info("Stopping server");
     if (this.resourceHandler != null) {
       try {
         this.resourceHandler.dispose();
@@ -124,6 +125,9 @@ public class Main {
         }
         if (config.getDevServer().isLiveReload()) {
           result.add("--live-reload");
+          if (config.getDevServer().isForceFullReload()) {
+            result.add("--force-full-reload");
+          }
         }
         if (config.getDevServer().getIp() != null) {
           result.add("--ip");

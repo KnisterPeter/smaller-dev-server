@@ -59,7 +59,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
       MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
       if (lru.containsKey(key)) {
         long lastUpdate = lru.get(key);
-        if (lastUpdate + 100 < System.currentTimeMillis()) {
+        if (lastUpdate + 500 > System.currentTimeMillis()) {
           return take();
         }
       }

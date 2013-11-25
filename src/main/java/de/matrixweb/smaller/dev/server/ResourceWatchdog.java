@@ -27,7 +27,8 @@ import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSytemWatchEvent
  */
 public class ResourceWatchdog {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ResourceWatchdog.class);
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(ResourceWatchdog.class);
 
   private final SmallerResourceHandler resourceHandler;
 
@@ -52,7 +53,8 @@ public class ResourceWatchdog {
    * @param config
    * @throws IOException
    */
-  public ResourceWatchdog(final SmallerResourceHandler resourceHandler, final Config config) throws IOException {
+  public ResourceWatchdog(final SmallerResourceHandler resourceHandler,
+      final Config config) throws IOException {
     this.resourceHandler = resourceHandler;
     this.config = config;
     this.watcher = FileSystemWatch.Factory.create();
@@ -73,7 +75,8 @@ public class ResourceWatchdog {
   private void watchRecursive(final Path dir) throws IOException {
     Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
       @Override
-      public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
+      public FileVisitResult preVisitDirectory(final Path dir,
+          final BasicFileAttributes attrs) throws IOException {
         FileSystemWatchKey key = ResourceWatchdog.this.watcher.register(dir);
         ResourceWatchdog.this.watches.put(key, dir);
         return FileVisitResult.CONTINUE;
@@ -97,7 +100,8 @@ public class ResourceWatchdog {
       } catch (final InterruptedException e) {
         continue;
       }
-      final List<String> changedResources = loopEvents(key, this.watches.get(key));
+      final List<String> changedResources = loopEvents(key,
+          this.watches.get(key));
       final boolean valid = key.reset();
       if (!valid) {
         this.watches.remove(key);
@@ -111,6 +115,7 @@ public class ResourceWatchdog {
   private List<String> loopEvents(final FileSystemWatchKey key, final Path path) {
     final List<String> changedResources = new ArrayList<>();
 
+    List<Path> checked = new ArrayList<Path>();
     for (final FileSytemWatchEvent<?> event : key.pollEvents()) {
       final FileSytemWatchEvent.Kind<?> kind = event.kind();
       if (kind.isOverflow()) {
@@ -118,28 +123,36 @@ public class ResourceWatchdog {
       }
       final FileSytemWatchEvent<Path> ev = cast(event);
       final Path child = path.resolve(ev.context());
-      LOGGER.debug("WatchEvent for {}", child);
-      findResourceRoot(changedResources, child);
-      watchNewDirectories(kind, child);
+      if (!checked.contains(child)) {
+        checked.add(child);
+        LOGGER.debug("WatchEvent for {}", child);
+        findResourceRoot(changedResources, child);
+        watchNewDirectories(kind, child);
+      }
     }
 
     return changedResources;
   }
 
-  private void findResourceRoot(final List<String> changedResources, final Path child) {
+  private void findResourceRoot(final List<String> changedResources,
+      final Path child) {
     for (final File root : this.config.getDocumentRoots()) {
+      LOGGER.debug("Check root path {} and change {}", root, child);
       if (child.startsWith(root.getPath())) {
-        changedResources.add(child.toFile().getPath().substring(root.getPath().length()));
+        changedResources.add(child.toFile().getPath()
+            .substring(root.getPath().length()));
       }
     }
     if (this.config.getTestFolder() != null) {
       if (child.startsWith(this.config.getTestFolder().getPath())) {
-        changedResources.add(child.toFile().getPath().substring(this.config.getTestFolder().getPath().length()));
+        changedResources.add(child.toFile().getPath()
+            .substring(this.config.getTestFolder().getPath().length()));
       }
     }
   }
 
-  private void watchNewDirectories(final FileSytemWatchEvent.Kind<?> kind, final Path child) {
+  private void watchNewDirectories(final FileSytemWatchEvent.Kind<?> kind,
+      final Path child) {
     if (kind.isEntryCreate()) {
       try {
         if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {

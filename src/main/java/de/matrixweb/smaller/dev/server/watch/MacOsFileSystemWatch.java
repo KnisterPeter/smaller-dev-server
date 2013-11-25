@@ -1,5 +1,6 @@
 package de.matrixweb.smaller.dev.server.watch;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -32,8 +33,10 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public FileSystemWatchKey register(final Path path) throws IOException {
-    return new MacOsWatchKey(new WatchableFile(path.toFile()).register(this.watchService,
-        StandardWatchEventKind.OVERFLOW, StandardWatchEventKind.ENTRY_CREATE, StandardWatchEventKind.ENTRY_MODIFY,
+    return new MacOsWatchKey(new WatchableFile(path.toFile()).register(
+        this.watchService, StandardWatchEventKind.OVERFLOW,
+        StandardWatchEventKind.ENTRY_CREATE,
+        StandardWatchEventKind.ENTRY_MODIFY,
         StandardWatchEventKind.ENTRY_DELETE));
   }
 
@@ -71,12 +74,13 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
     @Override
     @SuppressWarnings("unchecked")
     public Collection<FileSytemWatchEvent<?>> pollEvents() {
-      return CollectionUtils.collect(this.watchKey.pollEvents(), new Transformer() {
-        @Override
-        public Object transform(final Object input) {
-          return new MacOsFileSytemWatchEvent<>((WatchEvent<?>) input);
-        }
-      });
+      return CollectionUtils.collect(this.watchKey.pollEvents(),
+          new Transformer() {
+            @Override
+            public Object transform(final Object input) {
+              return new MacOsFileSytemWatchEvent<>((WatchEvent<?>) input);
+            }
+          });
     }
 
     /**
@@ -94,7 +98,8 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
     public int hashCode() {
       final int prime = 31;
       int result = 1;
-      result = prime * result + (this.watchKey == null ? 0 : this.watchKey.hashCode());
+      result = prime * result
+          + (this.watchKey == null ? 0 : this.watchKey.hashCode());
       return result;
     }
 
@@ -126,10 +131,10 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   }
 
   /**
-   * @author marwol
    * @param <T>
    */
-  public static class MacOsFileSytemWatchEvent<T> implements FileSytemWatchEvent<T> {
+  public static class MacOsFileSytemWatchEvent<T> implements
+      FileSytemWatchEvent<T> {
 
     private final WatchEvent<T> watchEvent;
 
@@ -152,12 +157,13 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
      * @see de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSytemWatchEvent#context()
      */
     @Override
+    @SuppressWarnings("unchecked")
     public T context() {
-      return this.watchEvent.context();
+      Path path = ((File) this.watchEvent.context()).toPath();
+      return (T) path;
     }
 
     /**
-     * @author marwol
      * @param <T>
      */
     public static class MacOsKind<T> implements FileSytemWatchEvent.Kind<T> {
@@ -167,7 +173,8 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
       /**
        * @param kind
        */
-      public MacOsKind(final com.barbarysoftware.watchservice.WatchEvent.Kind<T> kind) {
+      public MacOsKind(
+          final com.barbarysoftware.watchservice.WatchEvent.Kind<T> kind) {
         this.kind = kind;
       }
 

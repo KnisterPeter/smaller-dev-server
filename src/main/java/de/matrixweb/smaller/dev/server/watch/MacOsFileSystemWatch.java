@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -24,16 +23,7 @@ import de.matrixweb.smaller.dev.server.Config;
  */
 public class MacOsFileSystemWatch implements FileSystemWatch {
 
-  private Config config;
-  
   private final WatchService watchService;
-
-  private Map<Path, Long> lru = new LinkedHashMap<Path, Long>(5, .75F, true) {
-    private static final long serialVersionUID = 7304218013110419912L;
-    protected boolean removeEldestEntry(Map.Entry<Path, Long> eldest) {
-      return size() > 5;
-    }
-  };
 
   private Map<FileSystemWatchKey, Path> watches;
 
@@ -41,7 +31,6 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
    * 
    */
   public MacOsFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) {
-    this.config = config;
     this.watches = watches;
     watchService = WatchService.newWatchService();
   }
@@ -64,17 +53,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   @Override
   public FileSystemWatchKey take() throws InterruptedException {
     try {
-      MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
-      Path path = watches.get(key);
-      if (path != null && lru.containsKey(path)) {
-        long lastUpdate = lru.get(key);
-        if (lastUpdate + config.getWatchThreshold() > System.currentTimeMillis()) {
-          key.reset();
-          return take();
-        }
-      }
-      lru.put(path, System.currentTimeMillis());
-      return key;
+      return new MacOsWatchKey(this.watchService.take());
     } catch (ClosedWatchServiceException e) {
       throw new FileSystemClosedWatchServiceException();
     }

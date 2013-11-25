@@ -2,13 +2,10 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,9 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch;
+import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemClosedWatchServiceException;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemWatchKey;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSytemWatchEvent;
-import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemClosedWatchServiceException;
 
 /**
  * @author markusw
@@ -65,27 +62,15 @@ public class ResourceWatchdog {
     this.watcher = FileSystemWatch.Factory.create(config, this.watches);
     for (final File root : config.getDocumentRoots()) {
       LOGGER.debug("Watching {}", root);
-      watchRecursive(Paths.get(root.getPath()));
+      watcher.register(Paths.get(root.getPath()));
     }
     if (config.getTestFolder() != null) {
       LOGGER.debug("Watching {}", config.getTestFolder());
-      watchRecursive(Paths.get(config.getTestFolder().getPath()));
+      watcher.register(Paths.get(config.getTestFolder().getPath()));
     }
     final Thread thread = new Thread(this.watchdog, "Smaller Resource Watchdog");
     thread.setDaemon(true);
     thread.start();
-  }
-
-  private void watchRecursive(final Path dir) throws IOException {
-    Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-      @Override
-      public FileVisitResult preVisitDirectory(final Path dir,
-          final BasicFileAttributes attrs) throws IOException {
-        FileSystemWatchKey key = ResourceWatchdog.this.watcher.register(dir);
-        ResourceWatchdog.this.watches.put(key, dir);
-        return FileVisitResult.CONTINUE;
-      }
-    });
   }
 
   @SuppressWarnings("unchecked")
@@ -147,6 +132,13 @@ public class ResourceWatchdog {
 
   private void findResourceRoot(final List<String> changedResources,
       final Path child) {
+    File file = child.toFile();
+    try {
+      file = file.getCanonicalFile().getAbsoluteFile();
+    } catch (IOException e) {
+      LOGGER.warn("Unable to create absolute canonical path for {}: {}",
+          file, e.getMessage());
+    }
     for (File root : this.config.getDocumentRoots()) {
       try {
         root = root.getAbsoluteFile().getCanonicalFile();
@@ -154,9 +146,9 @@ public class ResourceWatchdog {
         LOGGER.warn("Unable to create absolute canonical path for {}: {}",
             root, e.getMessage());
       }
-      LOGGER.debug("Check root path {} and change {}", root, child);
-      if (child.startsWith(root.getPath())) {
-        changedResources.add(child.toFile().getPath()
+      LOGGER.debug("Check root path {} and change {}", root, file);
+      if (file.getPath().startsWith(root.getPath())) {
+        changedResources.add(file.getPath()
             .substring(root.getPath().length()));
       }
     }
@@ -180,7 +172,8 @@ public class ResourceWatchdog {
     if (kind.isEntryCreate()) {
       try {
         if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
-          watchRecursive(child);
+          // TODO: Check if this works for all providers
+          watcher.register(child);
         }
       } catch (final IOException x) {
         // Ignore this one

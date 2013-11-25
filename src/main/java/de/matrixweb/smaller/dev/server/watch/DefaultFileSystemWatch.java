@@ -3,11 +3,15 @@ package de.matrixweb.smaller.dev.server.watch;
 import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Map;
 
@@ -22,11 +26,14 @@ import de.matrixweb.smaller.dev.server.Config;
 public class DefaultFileSystemWatch implements FileSystemWatch {
 
   private final WatchService watchService;
+  
+  private Map<FileSystemWatchKey, Path> watches;
 
   /**
    * @throws IOException
    */
   public DefaultFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) throws IOException {
+    this.watches = watches;
     this.watchService = FileSystems.getDefault().newWatchService();
   }
 
@@ -34,11 +41,19 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
    * @see de.matrixweb.smaller.dev.server.watch.FileSystemWatch#register(java.nio.file.Path)
    */
   @Override
-  public FileSystemWatchKey register(final Path path) throws IOException {
-    return new DefaultWatchKey(path.register(this.watchService,
-        StandardWatchEventKinds.ENTRY_CREATE,
-        StandardWatchEventKinds.ENTRY_MODIFY,
-        StandardWatchEventKinds.ENTRY_DELETE));
+  public void register(final Path path) throws IOException {
+      Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult preVisitDirectory(final Path dir,
+            final BasicFileAttributes attrs) throws IOException {
+          FileSystemWatchKey key = new DefaultWatchKey(dir.register(watchService,
+              StandardWatchEventKinds.ENTRY_CREATE,
+              StandardWatchEventKinds.ENTRY_MODIFY,
+              StandardWatchEventKinds.ENTRY_DELETE));
+          watches.put(key, dir);
+          return FileVisitResult.CONTINUE;
+        }
+      });
   }
 
   /**

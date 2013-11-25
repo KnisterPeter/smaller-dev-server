@@ -14,10 +14,9 @@ public interface FileSystemWatch {
 
   /**
    * @param path
-   * @return
    * @throws IOException
    */
-  FileSystemWatchKey register(Path path) throws IOException;
+  void register(Path path) throws IOException;
 
   /**
    * @return

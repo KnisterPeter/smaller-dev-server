@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 
+import de.matrixweb.smaller.dev.server.Config;
+
 /**
  * @author marwol
  */
@@ -65,12 +67,12 @@ public interface FileSystemWatch {
   /** */
   static class Factory {
 
-    public static FileSystemWatch create() throws IOException {
+    public static FileSystemWatch create(Config config) throws IOException {
       final String osName = System.getProperty("os.name");
       if (osName.startsWith("Mac OS X") || osName.startsWith("Darwin")) {
-        return new MacOsFileSystemWatch();
+        return new MacOsFileSystemWatch(config);
       }
-      return new DefaultFileSystemWatch();
+      return new DefaultFileSystemWatch(config);
     }
 
   }

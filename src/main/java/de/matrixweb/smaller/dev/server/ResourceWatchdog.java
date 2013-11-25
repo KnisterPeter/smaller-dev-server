@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +49,8 @@ public class ResourceWatchdog {
       ResourceWatchdog.this.run();
     }
   };
+  
+  private Executor executor = Executors.newFixedThreadPool(1);
 
   /**
    * @param resourceHandler
@@ -57,7 +61,7 @@ public class ResourceWatchdog {
       final Config config) throws IOException {
     this.resourceHandler = resourceHandler;
     this.config = config;
-    this.watcher = FileSystemWatch.Factory.create();
+    this.watcher = FileSystemWatch.Factory.create(config);
     this.watches = new HashMap<FileSystemWatchKey, Path>();
     for (final File root : config.getDocumentRoots()) {
       LOGGER.debug("Watching {}", root);
@@ -108,7 +112,12 @@ public class ResourceWatchdog {
         this.watches.remove(key);
       }
       if (changedResources.size() > 0) {
-        this.resourceHandler.smallerResources(changedResources);
+        executor.execute(new Runnable() {
+          @Override
+          public void run() {
+            resourceHandler.smallerResources(changedResources);
+          }
+        });
       }
     }
   }

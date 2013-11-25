@@ -17,11 +17,15 @@ import com.barbarysoftware.watchservice.WatchKey;
 import com.barbarysoftware.watchservice.WatchService;
 import com.barbarysoftware.watchservice.WatchableFile;
 
+import de.matrixweb.smaller.dev.server.Config;
+
 /**
  * @author marwol
  */
 public class MacOsFileSystemWatch implements FileSystemWatch {
 
+  private Config config;
+  
   private final WatchService watchService;
 
   private Map<MacOsWatchKey, Long> lru = new LinkedHashMap<MacOsWatchKey, Long>(5, .75F, true) {
@@ -34,7 +38,8 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   /**
    * 
    */
-  public MacOsFileSystemWatch() {
+  public MacOsFileSystemWatch(Config config) {
+    this.config = config;
     watchService = WatchService.newWatchService();
   }
 
@@ -59,7 +64,8 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
       MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
       if (lru.containsKey(key)) {
         long lastUpdate = lru.get(key);
-        if (lastUpdate + 500 > System.currentTimeMillis()) {
+        if (lastUpdate + config.getWatchThreshold() > System.currentTimeMillis()) {
+          key.reset();
           return take();
         }
       }

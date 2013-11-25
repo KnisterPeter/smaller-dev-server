@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
+import org.slf4j.LoggerFactory;
 
 import com.barbarysoftware.watchservice.ClosedWatchServiceException;
 import com.barbarysoftware.watchservice.StandardWatchEventKind;
@@ -66,6 +67,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
     try {
       MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
       Path path = watches.get(key);
+LoggerFactory.getLogger(MacOsWatchKey.class).debug("Watch: {} => {}", key, path);
       if (path != null && lru.containsKey(path)) {
         long lastUpdate = lru.get(key);
         if (lastUpdate + config.getWatchThreshold() > System.currentTimeMillis()) {

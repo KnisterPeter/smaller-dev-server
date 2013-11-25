@@ -18,13 +18,13 @@ import com.barbarysoftware.watchservice.WatchableFile;
  */
 public class MacOsFileSystemWatch implements FileSystemWatch {
 
-  private WatchService watchService;
+  private final WatchService watchService;
 
   /**
    * 
    */
   public MacOsFileSystemWatch() {
-    WatchService.newWatchService();
+    watchService = WatchService.newWatchService();
   }
 
   /**

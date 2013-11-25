@@ -54,6 +54,13 @@ public interface FileSystemWatch {
     }
 
   }
+  
+  /** */
+  static class FileSystemClosedWatchServiceException extends RuntimeException {
+
+    private static final long serialVersionUID = 7910573924225778405L;
+    
+  }
 
   /** */
   static class Factory {

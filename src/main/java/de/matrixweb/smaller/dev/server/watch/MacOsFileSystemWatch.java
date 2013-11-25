@@ -8,6 +8,7 @@ import java.util.Collection;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
 
+import com.barbarysoftware.watchservice.ClosedWatchServiceException;
 import com.barbarysoftware.watchservice.StandardWatchEventKind;
 import com.barbarysoftware.watchservice.WatchEvent;
 import com.barbarysoftware.watchservice.WatchKey;
@@ -45,7 +46,11 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public FileSystemWatchKey take() throws InterruptedException {
-    return new MacOsWatchKey(this.watchService.take());
+    try {
+      return new MacOsWatchKey(this.watchService.take());
+    } catch (ClosedWatchServiceException e) {
+      throw new FileSystemClosedWatchServiceException();
+    }
   }
 
   /**

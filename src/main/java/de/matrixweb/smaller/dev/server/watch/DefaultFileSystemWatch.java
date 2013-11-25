@@ -1,6 +1,7 @@
 package de.matrixweb.smaller.dev.server.watch;
 
 import java.io.IOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
@@ -31,8 +32,10 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public FileSystemWatchKey register(final Path path) throws IOException {
-    return new DefaultWatchKey(path.register(this.watchService, StandardWatchEventKinds.ENTRY_CREATE,
-        StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE));
+    return new DefaultWatchKey(path.register(this.watchService,
+        StandardWatchEventKinds.ENTRY_CREATE,
+        StandardWatchEventKinds.ENTRY_MODIFY,
+        StandardWatchEventKinds.ENTRY_DELETE));
   }
 
   /**
@@ -40,7 +43,11 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public FileSystemWatchKey take() throws InterruptedException {
-    return new DefaultWatchKey(this.watchService.take());
+    try {
+      return new DefaultWatchKey(this.watchService.take());
+    } catch (ClosedWatchServiceException e) {
+      throw new FileSystemClosedWatchServiceException();
+    }
   }
 
   /**
@@ -69,12 +76,13 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
     @Override
     @SuppressWarnings("unchecked")
     public Collection<FileSytemWatchEvent<?>> pollEvents() {
-      return CollectionUtils.collect(this.watchKey.pollEvents(), new Transformer() {
-        @Override
-        public Object transform(final Object input) {
-          return new DefaultFileSytemWatchEvent<>((WatchEvent<?>) input);
-        }
-      });
+      return CollectionUtils.collect(this.watchKey.pollEvents(),
+          new Transformer() {
+            @Override
+            public Object transform(final Object input) {
+              return new DefaultFileSytemWatchEvent<>((WatchEvent<?>) input);
+            }
+          });
     }
 
     /**
@@ -92,7 +100,8 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
     public int hashCode() {
       final int prime = 31;
       int result = 1;
-      result = prime * result + (this.watchKey == null ? 0 : this.watchKey.hashCode());
+      result = prime * result
+          + (this.watchKey == null ? 0 : this.watchKey.hashCode());
       return result;
     }
 
@@ -127,7 +136,8 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
    * @author marwol
    * @param <T>
    */
-  public static class DefaultFileSytemWatchEvent<T> implements FileSytemWatchEvent<T> {
+  public static class DefaultFileSytemWatchEvent<T> implements
+      FileSytemWatchEvent<T> {
 
     private final WatchEvent<T> watchEvent;
 

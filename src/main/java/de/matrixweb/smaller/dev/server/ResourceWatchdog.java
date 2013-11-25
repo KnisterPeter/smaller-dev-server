@@ -2,7 +2,6 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -21,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemWatchKey;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSytemWatchEvent;
-
+import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemClosedWatchServiceException;
 /**
  * @author markusw
  */
@@ -94,7 +93,7 @@ public class ResourceWatchdog {
       FileSystemWatchKey key;
       try {
         key = this.watcher.take();
-      } catch (final ClosedWatchServiceException e) {
+      } catch (final FileSystemClosedWatchServiceException e) {
         this.runWatchdog = false;
         continue;
       } catch (final InterruptedException e) {
@@ -136,7 +135,8 @@ public class ResourceWatchdog {
 
   private void findResourceRoot(final List<String> changedResources,
       final Path child) {
-    for (final File root : this.config.getDocumentRoots()) {
+    for (File root : this.config.getDocumentRoots()) {
+      root = root.getAbsoluteFile();
       LOGGER.debug("Check root path {} and change {}", root, child);
       if (child.startsWith(root.getPath())) {
         changedResources.add(child.toFile().getPath()
@@ -144,7 +144,7 @@ public class ResourceWatchdog {
       }
     }
     if (this.config.getTestFolder() != null) {
-      if (child.startsWith(this.config.getTestFolder().getPath())) {
+      if (child.startsWith(this.config.getTestFolder().getAbsolutePath())) {
         changedResources.add(child.toFile().getPath()
             .substring(this.config.getTestFolder().getPath().length()));
       }

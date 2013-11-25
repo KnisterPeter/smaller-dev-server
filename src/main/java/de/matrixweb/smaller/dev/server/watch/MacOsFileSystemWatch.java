@@ -42,6 +42,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
    */
   public MacOsFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) {
     this.config = config;
+    this.watches = watches;
     watchService = WatchService.newWatchService();
   }
 

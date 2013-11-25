@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
@@ -21,6 +23,13 @@ import com.barbarysoftware.watchservice.WatchableFile;
 public class MacOsFileSystemWatch implements FileSystemWatch {
 
   private final WatchService watchService;
+
+  private Map<MacOsWatchKey, Long> lru = new LinkedHashMap<MacOsWatchKey, Long>(5, .75F, true) {
+    private static final long serialVersionUID = 7304218013110419912L;
+    protected boolean removeEldestEntry(Map.Entry<MacOsWatchKey, Long> eldest) {
+      return size() > 5;
+    }
+  };
 
   /**
    * 
@@ -47,7 +56,15 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   @Override
   public FileSystemWatchKey take() throws InterruptedException {
     try {
-      return new MacOsWatchKey(this.watchService.take());
+      MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
+      if (lru.containsKey(key)) {
+        long lastUpdate = lru.get(key);
+        if (lastUpdate + 100 < System.currentTimeMillis()) {
+          return take();
+        }
+      }
+      lru.put(key, System.currentTimeMillis());
+      return key;
     } catch (ClosedWatchServiceException e) {
       throw new FileSystemClosedWatchServiceException();
     }

@@ -3,6 +3,7 @@ package de.matrixweb.smaller.dev.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -182,15 +183,24 @@ public class HttpClient {
   private HttpResponse executeRequest(final HttpRequest request,
       final DefaultHttpClientConnection conn, final BasicHttpContext context)
       throws IOException {
+    return executeRequest(request, conn, context, true);
+  }
+
+  private HttpResponse executeRequest(final HttpRequest request,
+      final DefaultHttpClientConnection conn, final BasicHttpContext context,
+      boolean withRetry) throws IOException {
     HttpResponse response = null;
     try {
       this.executor.preProcess(request, this.httpProcessor, context);
       response = this.executor.execute(request, conn, context);
       this.executor.postProcess(response, this.httpProcessor, context);
-    } catch (final NoHttpResponseException e) {
+    } catch (SocketException | NoHttpResponseException e) {
+      if (!withRetry) {
+        throw e;
+      }
       // Retry with reopened connection
       openConnection(this.targetHost, conn, request.getParams());
-      return executeRequest(request, conn, context);
+      return executeRequest(request, conn, context, false);
     } catch (final HttpException e) {
       throw new IOException("Failed to execute http request", e);
     }

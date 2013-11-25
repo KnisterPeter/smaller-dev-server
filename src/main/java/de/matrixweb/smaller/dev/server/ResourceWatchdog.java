@@ -21,6 +21,7 @@ import de.matrixweb.smaller.dev.server.watch.FileSystemWatch;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemWatchKey;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSytemWatchEvent;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemClosedWatchServiceException;
+
 /**
  * @author markusw
  */
@@ -136,17 +137,29 @@ public class ResourceWatchdog {
   private void findResourceRoot(final List<String> changedResources,
       final Path child) {
     for (File root : this.config.getDocumentRoots()) {
-      root = root.getAbsoluteFile();
+      try {
+        root = root.getAbsoluteFile().getCanonicalFile();
+      } catch (IOException e) {
+        LOGGER.warn("Unable to create absolute canonical path for {}: {}",
+            root, e.getMessage());
+      }
       LOGGER.debug("Check root path {} and change {}", root, child);
       if (child.startsWith(root.getPath())) {
         changedResources.add(child.toFile().getPath()
             .substring(root.getPath().length()));
       }
     }
-    if (this.config.getTestFolder() != null) {
-      if (child.startsWith(this.config.getTestFolder().getAbsolutePath())) {
+    File test = config.getTestFolder();
+    if (test != null) {
+      try {
+        test = test.getAbsoluteFile().getCanonicalFile();
+      } catch (IOException e) {
+        LOGGER.warn("Unable to create absolute canonical path for {}: {}",
+            test, e.getMessage());
+      }
+      if (child.startsWith(test.getPath())) {
         changedResources.add(child.toFile().getPath()
-            .substring(this.config.getTestFolder().getPath().length()));
+            .substring(test.getPath().length()));
       }
     }
   }

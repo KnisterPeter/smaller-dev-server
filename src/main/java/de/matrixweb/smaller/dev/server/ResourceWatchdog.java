@@ -94,6 +94,7 @@ public class ResourceWatchdog {
       FileSystemWatchKey key;
       try {
         key = this.watcher.take();
+        LOGGER.debug("Got watch-key: {}", key);
       } catch (final FileSystemClosedWatchServiceException e) {
         this.runWatchdog = false;
         continue;
@@ -117,6 +118,7 @@ public class ResourceWatchdog {
 
     List<Path> checked = new ArrayList<Path>();
     for (final FileSytemWatchEvent<?> event : key.pollEvents()) {
+      LOGGER.debug("Polled event: {}", event);
       final FileSytemWatchEvent.Kind<?> kind = event.kind();
       if (kind.isOverflow()) {
         continue;

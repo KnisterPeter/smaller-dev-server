@@ -46,9 +46,6 @@ public class Config {
   @Option(name = "-d", aliases = { "--document-root" }, multiValued = true, usage = "The folders to scan for resources")
   private List<File> documentRoots;
 
-  @Option(name = "--watch-threshold")
-  private long watchThreshold;
-
   @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use. Could be one of:\n"
       + "  raw        - Just deliveres raw html files\n"
       + "  soy        - Google Closure templates\n"
@@ -241,14 +238,6 @@ public class Config {
    */
   public void setDocumentRoots(final List<File> documentRoots) {
     this.documentRoots = documentRoots;
-  }
-
-  public long getWatchThreshold() {
-    return this.watchThreshold;
-  }
-
-  public void setWatchThreshold(long watchThreshold) {
-    this.watchThreshold = watchThreshold;
   }
 
   /**

@@ -28,17 +28,19 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   
   private final WatchService watchService;
 
-  private Map<MacOsWatchKey, Long> lru = new LinkedHashMap<MacOsWatchKey, Long>(5, .75F, true) {
+  private Map<Path, Long> lru = new LinkedHashMap<Path, Long>(5, .75F, true) {
     private static final long serialVersionUID = 7304218013110419912L;
-    protected boolean removeEldestEntry(Map.Entry<MacOsWatchKey, Long> eldest) {
+    protected boolean removeEldestEntry(Map.Entry<Path, Long> eldest) {
       return size() > 5;
     }
   };
 
+  private Map<FileSystemWatchKey, Path> watches;
+
   /**
    * 
    */
-  public MacOsFileSystemWatch(Config config) {
+  public MacOsFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) {
     this.config = config;
     watchService = WatchService.newWatchService();
   }
@@ -62,14 +64,15 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   public FileSystemWatchKey take() throws InterruptedException {
     try {
       MacOsWatchKey key = new MacOsWatchKey(this.watchService.take());
-      if (lru.containsKey(key)) {
+      Path path = watches.get(key);
+      if (path != null && lru.containsKey(path)) {
         long lastUpdate = lru.get(key);
         if (lastUpdate + config.getWatchThreshold() > System.currentTimeMillis()) {
           key.reset();
           return take();
         }
       }
-      lru.put(key, System.currentTimeMillis());
+      lru.put(path, System.currentTimeMillis());
       return key;
     } catch (ClosedWatchServiceException e) {
       throw new FileSystemClosedWatchServiceException();

@@ -9,6 +9,7 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
@@ -25,7 +26,7 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
   /**
    * @throws IOException
    */
-  public DefaultFileSystemWatch(Config config) throws IOException {
+  public DefaultFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) throws IOException {
     this.watchService = FileSystems.getDefault().newWatchService();
   }
 

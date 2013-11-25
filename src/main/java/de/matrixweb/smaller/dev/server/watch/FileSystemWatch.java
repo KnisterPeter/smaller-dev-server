@@ -3,6 +3,7 @@ package de.matrixweb.smaller.dev.server.watch;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Map;
 
 import de.matrixweb.smaller.dev.server.Config;
 
@@ -67,12 +68,12 @@ public interface FileSystemWatch {
   /** */
   static class Factory {
 
-    public static FileSystemWatch create(Config config) throws IOException {
+    public static FileSystemWatch create(Config config, final Map<FileSystemWatchKey, Path> watches) throws IOException {
       final String osName = System.getProperty("os.name");
       if (osName.startsWith("Mac OS X") || osName.startsWith("Darwin")) {
-        return new MacOsFileSystemWatch(config);
+        return new MacOsFileSystemWatch(config, watches);
       }
-      return new DefaultFileSystemWatch(config);
+      return new DefaultFileSystemWatch(config, watches);
     }
 
   }

@@ -61,8 +61,8 @@ public class ResourceWatchdog {
       final Config config) throws IOException {
     this.resourceHandler = resourceHandler;
     this.config = config;
-    this.watcher = FileSystemWatch.Factory.create(config);
     this.watches = new HashMap<FileSystemWatchKey, Path>();
+    this.watcher = FileSystemWatch.Factory.create(config, this.watches);
     for (final File root : config.getDocumentRoots()) {
       LOGGER.debug("Watching {}", root);
       watchRecursive(Paths.get(root.getPath()));

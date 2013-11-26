@@ -167,7 +167,7 @@
       <plugin>
         <groupId>de.matrixweb.smaller</groupId>
         <artifactId>smaller-node-builder-maven-plugin</artifactId>
-        <version>1.0.5</version>
+        <version>1.0.7-SNAPSHOT</version>
         <configuration>
           <type>js</type>
           <npm-only>true</npm-only>
@@ -180,7 +180,7 @@
               <name>minijasminenode-0.2.4</name>
               <packages>
                 <package>git://github.com/KnisterPeter/minijasminenode</package>
-                <package>jasmine-given@2.4.0</package>
+                <package>jasmine-given@2.5.1</package>
                 <package>file@0.2.1</package>
               </packages>
               <script-file>src/main/resources/tests/jasmine.js</script-file>

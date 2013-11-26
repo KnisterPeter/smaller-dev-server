@@ -159,14 +159,21 @@ public class Main {
           result.add("--process");
           result.add(process);
         }
-        final List<String> processors = new ArrayList<>(2);
+        if (config.getProcessors() != null) {
+          if (config.getProcessors().get("js") != null) {
+            result.add("--js-processors");
+            result.add(StringUtils.join(config.getProcessors().get("js"), ','));
+          }
+          if (config.getProcessors().get("css") != null) {
+            result.add("--css-processors");
+            result.add(StringUtils.join(config.getProcessors().get("css"), ','));
+          }
+        }
+
         final List<String> inFiles = new ArrayList<>(2);
         for (final String[] values : config.getProcessors().values()) {
-          processors.add(StringUtils.join(values, ','));
           inFiles.add(config.getTasks().get(values[0]).getSrc()[0]);
         }
-        result.add("--processors");
-        result.add(StringUtils.join(processors, ','));
         for (final String in : inFiles) {
           result.add("--in");
           result.add(in);

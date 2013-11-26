@@ -34,8 +34,18 @@ public class Config {
   @Option(name = "-v", aliases = { "--verbose" }, usage = "To log debug info")
   private boolean debug = false;
 
-  @Option(name = "-p", aliases = { "--processors" }, usage = "To processors to apply to intercepted requests")
+  /**
+   * @deprecated Use {@link #jsProcessors} and {@link #cssProcessors} instead
+   */
+  @Deprecated
+  @Option(name = "-p", aliases = { "--processors" }, hidden = true, usage = "To processors to apply to intercepted requests")
   private String processors;
+
+  @Option(name = "--js-processors", usage = "To processors to apply to intercepted javascript requests")
+  private String jsProcessors;
+
+  @Option(name = "--css-processors", usage = "To processors to apply to intercepted css requests")
+  private String cssProcessors;
 
   @Option(name = "-i", aliases = { "--in" }, usage = "The main input files if any")
   private List<String> in;
@@ -84,8 +94,13 @@ public class Config {
       throw new CmdLineException(parser,
           "--test-framework and --test-directory are required; only one is given");
     }
-    if (this.processors == null ^ this.in == null) {
-      LOGGER
+    if (this.processors != null) {
+      Config.LOGGER
+          .warn("\n\n*** Detected usage of the deprecated --processors option. Use --js-processors and --css-processors intead\n");
+    }
+    if ((this.processors == null && this.jsProcessors == null && this.cssProcessors == null)
+        ^ this.in == null) {
+      Config.LOGGER
           .warn("\n\n*** Defined processors or input files but not both. This will result in strange behaviour! ***\n");
     }
   }
@@ -182,7 +197,9 @@ public class Config {
 
   /**
    * @return the processors
+   * @deprecated
    */
+  @Deprecated
   public String getProcessors() {
     return this.processors;
   }
@@ -190,9 +207,27 @@ public class Config {
   /**
    * @param processors
    *          the processors to set
+   * @deprecated
    */
+  @Deprecated
   public void setProcessors(final String processors) {
     this.processors = processors;
+  }
+
+  public String getJsProcessors() {
+    return this.jsProcessors;
+  }
+
+  public void setJsProcessors(final String jsProcessors) {
+    this.jsProcessors = jsProcessors;
+  }
+
+  public String getCssProcessors() {
+    return this.cssProcessors;
+  }
+
+  public void setCssProcessors(final String cssProcessors) {
+    this.cssProcessors = cssProcessors;
   }
 
   /**

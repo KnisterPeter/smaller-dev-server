@@ -38,6 +38,7 @@ import de.matrixweb.smaller.resource.ProcessorFactory;
 import de.matrixweb.smaller.resource.ResourceResolver;
 import de.matrixweb.smaller.resource.VFSResourceResolver;
 import de.matrixweb.smaller.resource.impl.JavaEEProcessorFactory;
+import de.matrixweb.vfs.ResourceScanner.VFSResourceLister;
 import de.matrixweb.vfs.VFS;
 import de.matrixweb.vfs.VFSUtils;
 import de.matrixweb.vfs.VFile;
@@ -63,6 +64,10 @@ public class SmallerResourceHandler {
   private ResourceResolver resolver;
 
   private Task task;
+
+  private Task jsTask;
+
+  private Task cssTask;
 
   private Pipeline pipeline;
 
@@ -90,11 +95,7 @@ public class SmallerResourceHandler {
         this.processorFactory = new JavaEEProcessorFactory();
         this.resolver = new VFSResourceResolver(this.vfs);
         this.pipeline = new Pipeline(this.processorFactory);
-        this.task = new Task(this.config.getProcessors(), StringUtils.join(
-            this.config.getIn(), ','), StringUtils.join(
-            this.config.getProcess(), ','));
-        this.task
-            .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
+        setupTasks(config);
       }
       this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
           this.vfs);
@@ -107,6 +108,30 @@ public class SmallerResourceHandler {
     }
   }
 
+  private void setupTasks(final Config config) {
+    if (this.config.getProcessors() != null) {
+      this.task = new Task(this.config.getProcessors(), StringUtils.join(
+          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
+          ','));
+      this.task
+          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
+    }
+    if (config.getJsProcessors() != null) {
+      this.jsTask = new Task(this.config.getJsProcessors(), StringUtils.join(
+          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
+          ','));
+      this.jsTask
+          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
+    }
+    if (config.getCssProcessors() != null) {
+      this.cssTask = new Task(this.config.getCssProcessors(), StringUtils.join(
+          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
+          ','));
+      this.cssTask
+          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
+    }
+  }
+
   private final void prepareVfs() throws IOException {
     final List<WrappedSystem> mergedRoot = new ArrayList<>();
     for (final File root : this.config.getDocumentRoots()) {
@@ -116,7 +141,8 @@ public class SmallerResourceHandler {
   }
 
   void smallerResources(final List<String> changedResources) {
-    LOGGER.debug("Changed resources: {}", changedResources);
+    SmallerResourceHandler.LOGGER.debug("Changed resources: {}",
+        changedResources);
 
     final MutableBoolean fullReload = new MutableBoolean(
         this.config.isForceFullReload());
@@ -132,54 +158,67 @@ public class SmallerResourceHandler {
       remaining = recompileTemplates(remaining, fullReload);
     }
     if (changedResources == null || remaining.size() > 0) {
-      // TODO: Check if test-resources was changed
-      // => rebuild test resources
-      // => rerun tests
-      // otherwise:
-      // => rerun whole stack
-      if (this.task != null) {
+      if (this.task != null || this.jsTask != null || this.cssTask != null) {
         try {
-          final long startUpdated = System.currentTimeMillis();
-
-          this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
-              this.resolver, this.task);
-
-          if (this.config.getTestFolder() != null) {
-            final VFS testVfs = new VFS();
-            try {
-              testVfs.mount(testVfs.find("/"), new MergingVFS(new WrappedVFS(
-                  this.vfs.find("/")),
-                  new JavaFile(this.config.getTestFolder())));
-              this.testRunner.run(testVfs);
-            } catch (final IOException e) {
-              LOGGER.error("Failed to execute tests", e);
-            } finally {
-              testVfs.dispose();
-            }
-          }
-
-          try {
-            for (final String process : this.config.getProcess()) {
-              final long lastModified = this.vfs.find(process)
-                  .getLastModified();
-              if (lastModified > startUpdated) {
-                if (process.endsWith(".js")) {
-                  jsReload = process;
-                } else if (process.endsWith(".css")) {
-                  cssReload = process;
-                }
-              }
-            }
-          } catch (final IOException e) {
+          if (this.task != null) {
+            executeSmallerTask(changedResources, this.task, true);
             fullReload.setValue(true);
+          } else {
+            // TODO: Check if changed resources are within the task to execute
+            if (this.jsTask != null) {
+              executeSmallerTask(changedResources, this.jsTask, true);
+              jsReload = getProcessByExtension(".js");
+            }
+            if (this.cssTask != null) {
+              executeSmallerTask(changedResources, this.cssTask, false);
+              cssReload = getProcessByExtension(".css");
+            }
           }
         } catch (final SmallerException e) {
-          LOGGER.error("Failed to process resources", e);
+          SmallerResourceHandler.LOGGER.error("Failed to process resources", e);
         }
       }
     }
     LiveReloadSocket.broadcastReload(fullReload.booleanValue(), jsReload,
         cssReload);
+  }
+
+  private void executeSmallerTask(final List<String> changedResources,
+      final Task task, final boolean runTests) {
+    VFSResourceLister lister = new VFSResourceLister(this.vfs);
+    // config.getJsProcessors();
+    // config.getCssProcessors();
+
+    // TODO: Check if test-resources was changed
+    // => rebuild test resources
+    // => rerun tests
+    // otherwise:
+    // => rerun whole stack
+    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
+        task);
+
+    if (runTests && this.config.getTestFolder() != null) {
+      final VFS testVfs = new VFS();
+      try {
+        testVfs.mount(testVfs.find("/"),
+            new MergingVFS(new WrappedVFS(this.vfs.find("/")), new JavaFile(
+                this.config.getTestFolder())));
+        this.testRunner.run(testVfs);
+      } catch (final IOException e) {
+        SmallerResourceHandler.LOGGER.error("Failed to execute tests", e);
+      } finally {
+        testVfs.dispose();
+      }
+    }
+  }
+
+  private String getProcessByExtension(final String extension) {
+    for (String process : this.config.getProcess()) {
+      if (process.endsWith(extension)) {
+        return process;
+      }
+    }
+    return null;
   }
 
   private List<String> cleanupConfigCache(final List<String> changedResources,
@@ -211,7 +250,8 @@ public class SmallerResourceHandler {
           it.remove();
         }
       } catch (final IOException e) {
-        LOGGER.warn("Failed to compile template: " + path, e);
+        SmallerResourceHandler.LOGGER.warn("Failed to compile template: "
+            + path, e);
       }
     }
     return remaining;

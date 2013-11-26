@@ -37,13 +37,13 @@ public class Config {
   @Option(name = "-p", aliases = { "--processors" }, usage = "To processors to apply to intercepted requests")
   private String processors;
 
-  @Option(name = "-i", aliases = { "--in" }, multiValued = true, usage = "The main input files if any")
+  @Option(name = "-i", aliases = { "--in" }, usage = "The main input files if any")
   private List<String> in;
 
-  @Option(name = "-P", aliases = { "--process" }, multiValued = true, usage = "The requests to intercept")
+  @Option(name = "-P", aliases = { "--process" }, usage = "The requests to intercept")
   private List<String> process;
 
-  @Option(name = "-d", aliases = { "--document-root" }, multiValued = true, usage = "The folders to scan for resources")
+  @Option(name = "-d", aliases = { "--document-root" }, usage = "The folders to scan for resources")
   private List<File> documentRoots;
 
   @Option(name = "-t", aliases = { "--template-engine" }, usage = "The template engine to use. Could be one of:\n"

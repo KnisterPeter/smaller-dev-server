@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,8 +44,6 @@ public class ResourceWatchdog {
       ResourceWatchdog.this.run();
     }
   };
-  
-  private Executor executor = Executors.newFixedThreadPool(1);
 
   /**
    * @param resourceHandler
@@ -62,11 +58,11 @@ public class ResourceWatchdog {
     this.watcher = FileSystemWatch.Factory.create(config, this.watches);
     for (final File root : config.getDocumentRoots()) {
       LOGGER.debug("Watching {}", root);
-      watcher.register(Paths.get(root.getPath()));
+      this.watcher.register(Paths.get(root.getPath()));
     }
     if (config.getTestFolder() != null) {
       LOGGER.debug("Watching {}", config.getTestFolder());
-      watcher.register(Paths.get(config.getTestFolder().getPath()));
+      this.watcher.register(Paths.get(config.getTestFolder().getPath()));
     }
     final Thread thread = new Thread(this.watchdog, "Smaller Resource Watchdog");
     thread.setDaemon(true);
@@ -97,12 +93,7 @@ public class ResourceWatchdog {
         this.watches.remove(key);
       }
       if (changedResources.size() > 0) {
-        executor.execute(new Runnable() {
-          @Override
-          public void run() {
-            resourceHandler.smallerResources(changedResources);
-          }
-        });
+        this.resourceHandler.smallerResources(changedResources);
       }
     }
   }
@@ -110,7 +101,7 @@ public class ResourceWatchdog {
   private List<String> loopEvents(final FileSystemWatchKey key, final Path path) {
     final List<String> changedResources = new ArrayList<>();
 
-    List<Path> checked = new ArrayList<Path>();
+    final List<Path> checked = new ArrayList<Path>();
     for (final FileSytemWatchEvent<?> event : key.pollEvents()) {
       LOGGER.debug("Polled event: {}", event);
       final FileSytemWatchEvent.Kind<?> kind = event.kind();
@@ -135,28 +126,27 @@ public class ResourceWatchdog {
     File file = child.toFile();
     try {
       file = file.getCanonicalFile().getAbsoluteFile();
-    } catch (IOException e) {
-      LOGGER.warn("Unable to create absolute canonical path for {}: {}",
-          file, e.getMessage());
+    } catch (final IOException e) {
+      LOGGER.warn("Unable to create absolute canonical path for {}: {}", file,
+          e.getMessage());
     }
     for (File root : this.config.getDocumentRoots()) {
       try {
         root = root.getAbsoluteFile().getCanonicalFile();
-      } catch (IOException e) {
+      } catch (final IOException e) {
         LOGGER.warn("Unable to create absolute canonical path for {}: {}",
             root, e.getMessage());
       }
       LOGGER.debug("Check root path {} and change {}", root, file);
       if (file.getPath().startsWith(root.getPath())) {
-        changedResources.add(file.getPath()
-            .substring(root.getPath().length()));
+        changedResources.add(file.getPath().substring(root.getPath().length()));
       }
     }
-    File test = config.getTestFolder();
+    File test = this.config.getTestFolder();
     if (test != null) {
       try {
         test = test.getAbsoluteFile().getCanonicalFile();
-      } catch (IOException e) {
+      } catch (final IOException e) {
         LOGGER.warn("Unable to create absolute canonical path for {}: {}",
             test, e.getMessage());
       }
@@ -173,7 +163,7 @@ public class ResourceWatchdog {
       try {
         if (Files.isDirectory(child, LinkOption.NOFOLLOW_LINKS)) {
           // TODO: Check if this works for all providers
-          watcher.register(child);
+          this.watcher.register(child);
         }
       } catch (final IOException x) {
         // Ignore this one

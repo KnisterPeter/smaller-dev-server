@@ -16,6 +16,12 @@ public interface TemplateEngine {
   void setVfs(final VFS vfs);
 
   /**
+   * @param uri
+   * @return Returns a template uri based on the given uri path
+   */
+  String getTemplateUri(String uri);
+
+  /**
    * @param path
    * @return Returns true if this {@link TemplateEngine} compiled the given
    *         resource, false otherwise

@@ -1,0 +1,9 @@
+dev-server:
+    proxyhost: localhost
+    proxyport: 3000
+environments:
+    handlebars:
+        templates: handlebars
+        files:
+            folder:
+                - "src/test/resources/test1"

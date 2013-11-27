@@ -1,0 +1,9 @@
+dev-server:
+    proxyhost: localhost
+    proxyport: 3000
+environments:
+    velocity:
+        templates: velocity
+        files:
+            folder:
+                - "src/test/resources/test1"

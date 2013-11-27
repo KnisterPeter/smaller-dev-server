@@ -5,8 +5,6 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 
-import de.matrixweb.smaller.dev.server.Config;
-
 /**
  * @author marwol
  */
@@ -56,23 +54,24 @@ public interface FileSystemWatch {
     }
 
   }
-  
+
   /** */
   static class FileSystemClosedWatchServiceException extends RuntimeException {
 
     private static final long serialVersionUID = 7910573924225778405L;
-    
+
   }
 
   /** */
   static class Factory {
 
-    public static FileSystemWatch create(Config config, final Map<FileSystemWatchKey, Path> watches) throws IOException {
+    public static FileSystemWatch create(
+        final Map<FileSystemWatchKey, Path> watches) throws IOException {
       final String osName = System.getProperty("os.name");
       if (osName.startsWith("Mac OS X") || osName.startsWith("Darwin")) {
-        return new MacOsFileSystemWatch(config, watches);
+        return new MacOsFileSystemWatch(watches);
       }
-      return new DefaultFileSystemWatch(config, watches);
+      return new DefaultFileSystemWatch(watches);
     }
 
   }

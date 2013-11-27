@@ -22,6 +22,14 @@ public class RawTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#getTemplateUri(java.lang.String)
+   */
+  @Override
+  public String getTemplateUri(final String uri) {
+    return uri;
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
    */
   @Override

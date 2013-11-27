@@ -29,6 +29,14 @@ public class SoyTemplates implements TemplateEngine {
   }
 
   /**
+   * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#getTemplateUri(java.lang.String)
+   */
+  @Override
+  public String getTemplateUri(final String uri) {
+    return FilenameUtils.removeExtension(uri) + ".soy";
+  }
+
+  /**
    * @see de.matrixweb.smaller.dev.server.templates.TemplateEngine#compile(java.lang.String)
    */
   @Override

@@ -1,0 +1,58 @@
+dev-server:
+    proxyhost: joop.com 
+    proxyport: 80
+    debug: false
+    live-reload: true
+    inject-partials: true
+environments:
+    js:
+        process: 
+            - "/ignore/static/extensions/js/basic-min.js" 
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.coffee"
+                - "**/*.js"
+        processors:
+            coffeeScript:
+                src: "/main.coffee"
+            browserify:
+                dest: "/app.js"
+        pipeline:
+            - coffeeScript
+            - browserify
+    css:
+        process: 
+            - "/ignore/static/extensions/css/joop-base64-min.css" 
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.less"
+                - "**/*.css"
+        processors:
+            lessjs:
+                src: "/main.less"
+                dest: "/style.css"
+        pipeline:
+            - lessjs
+    templates:
+        templates: handlebars
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.hbs"
+                - "de/de/**"
+    tests:
+        test-framework: jasmine
+        test-files:
+            folder:
+                - "../src/test/resources/tests/jasmine"

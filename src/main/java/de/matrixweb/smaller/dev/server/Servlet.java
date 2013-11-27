@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -37,6 +38,9 @@ import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.matrixweb.smaller.config.ConfigFile;
+import de.matrixweb.smaller.config.Environment;
+
 /**
  * @author markusw
  */
@@ -48,20 +52,23 @@ public class Servlet extends WebSocketServlet {
 
   private final HttpClient client;
 
-  private final Config config;
+  private final ConfigFile configFile;
 
-  private final SmallerResourceHandler resourceHandler;
+  private final Map<Environment, SmallerResourceHandler> resourceHandlers;
+
+  private String liveReloadClient = null;
 
   /**
-   * @param config
-   * @param resourceHandler
+   * @param configFile
+   * @param resourceHandlers
    */
-  public Servlet(final Config config,
-      final SmallerResourceHandler resourceHandler) {
-    this.config = config;
-    this.resourceHandler = resourceHandler;
-    this.client = new HttpClient(new HttpHost(config.getProxyhost(),
-        config.getProxyport()), config.getPort());
+  public Servlet(final ConfigFile configFile,
+      final Map<Environment, SmallerResourceHandler> resourceHandlers) {
+    this.configFile = configFile;
+    this.resourceHandlers = resourceHandlers;
+    this.client = new HttpClient(new HttpHost(configFile.getDevServer()
+        .getProxyhost(), configFile.getDevServer().getProxyport()), configFile
+        .getDevServer().getPort());
     LiveReloadSocket.start();
   }
 
@@ -104,10 +111,9 @@ public class Servlet extends WebSocketServlet {
     try {
       final String uri = request.getRequestURI();
       LOGGER.debug("Requested uri: {}", uri);
-      if (this.config.getProcess() != null
-          && this.config.getProcess().contains(uri)) {
-        // TODO: Allow wildcard uris
-        this.resourceHandler.process(baos, response, uri);
+      final Environment env = findEnvironmentByUri(uri);
+      if (env != null) {
+        this.resourceHandlers.get(env).process(baos, response, uri);
       } else {
         try {
           handleProxyRequest(baos, request, response, uri);
@@ -136,7 +142,11 @@ public class Servlet extends WebSocketServlet {
       final HttpServletRequest request, final HttpServletResponse response,
       final String uri) throws IOException {
     try {
-      this.resourceHandler.renderTemplate(out, request, response, uri);
+      final Environment env = findEnvironmentByFile(uri);
+      if (env != null) {
+        this.resourceHandlers.get(env).renderTemplate(out, request, response,
+            uri, getLiveReloadClient());
+      }
     } catch (final IOException e) {
       LOGGER.error("Failed to render template", e);
       response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -218,7 +228,8 @@ public class Servlet extends WebSocketServlet {
 
     if (entity != null) {
       try (InputStream in = entity.getContent()) {
-        if (this.config.isInjectPartials() && contentType != null
+        if (this.configFile.getDevServer().isInjectPartials()
+            && contentType != null
             && "text/html".equals(contentType.getMimeType())) {
           final Document doc = Jsoup.parse(IOUtils.toString(in));
           injectPartials(doc, uri, request);
@@ -227,11 +238,11 @@ public class Servlet extends WebSocketServlet {
           LOGGER.debug("Send proxy response");
           IOUtils.copy(in, out);
         }
-        if (this.config.isLiveReload() && contentType != null
+        if (this.configFile.getDevServer().isLiveReload()
+            && contentType != null
             && "text/html".equals(contentType.getMimeType())) {
           LOGGER.debug("Injecting live-reload snippet");
-          out.write(this.resourceHandler.getLiveReloadClient()
-              .getBytes("UTF-8"));
+          out.write(getLiveReloadClient().getBytes("UTF-8"));
         }
       }
     }
@@ -242,29 +253,76 @@ public class Servlet extends WebSocketServlet {
       final HttpServletRequest request) throws IOException,
       UnsupportedEncodingException {
     LOGGER.info("Injecting partials for uri: {}", uri);
-    final Map<String, Object> data = this.resourceHandler
-        .loadRequestConfiguration(uri, request);
-    if (data.containsKey("partials")) {
-      final Map<String, Object> partials = (Map<String, Object>) data
-          .get("partials");
-      for (final Entry<String, Object> partial : partials.entrySet()) {
-        final Map<String, String> partialConfig = (Map<String, String>) partial
-            .getValue();
-        for (final Element el : doc.select(partial.getKey())) {
-          final ByteArrayOutputStream capture = new ByteArrayOutputStream();
-          this.resourceHandler.renderTemplate(capture, request, null,
-              partialConfig.get("partial"), data, true);
-          if ("appendChild".equals(partialConfig.get("mode"))) {
-            el.append(capture.toString("UTF-8"));
-          } else if ("prependChild".equals(partialConfig.get("mode"))) {
-            el.prepend(capture.toString("UTF-8"));
-          } else if ("replace".equals(partialConfig.get("mode"))) {
-            el.replaceWith(Jsoup.parseBodyFragment(capture.toString("UTF-8"))
-                .select("body *").first());
+
+    final Environment env = findEnvironmentByFile(uri);
+    if (env != null) {
+      final SmallerResourceHandler handler = this.resourceHandlers.get(env);
+
+      final Map<String, Object> data = handler.loadRequestConfiguration(uri,
+          request);
+      if (data.containsKey("partials")) {
+        final Map<String, Object> partials = (Map<String, Object>) data
+            .get("partials");
+        for (final Entry<String, Object> partial : partials.entrySet()) {
+          final Map<String, String> partialConfig = (Map<String, String>) partial
+              .getValue();
+          for (final Element el : doc.select(partial.getKey())) {
+            final ByteArrayOutputStream capture = new ByteArrayOutputStream();
+            handler.renderTemplate(capture, request, null,
+                partialConfig.get("partial"), data, null);
+            if ("appendChild".equals(partialConfig.get("mode"))) {
+              el.append(capture.toString("UTF-8"));
+            } else if ("prependChild".equals(partialConfig.get("mode"))) {
+              el.prepend(capture.toString("UTF-8"));
+            } else if ("replace".equals(partialConfig.get("mode"))) {
+              el.replaceWith(Jsoup.parseBodyFragment(capture.toString("UTF-8"))
+                  .select("body *").first());
+            }
           }
         }
       }
     }
+  }
+
+  private Environment findEnvironmentByUri(final String uri) {
+    for (final Environment env : this.configFile.getEnvironments().values()) {
+      if (ArrayUtils.contains(env.getProcess(), uri)) {
+        return env;
+      }
+    }
+    return null;
+  }
+
+  private Environment findEnvironmentByFile(final String file) {
+    for (final Entry<Environment, SmallerResourceHandler> entry : this.resourceHandlers
+        .entrySet()) {
+      final SmallerResourceHandler resourceHandler = entry.getValue();
+      if (resourceHandler.hasFile(resourceHandler.getTemplateEngine()
+          .getTemplateUri(file)) || resourceHandler.hasFile(file + ".cfg.json")) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @return Returns the live-reload client code
+   * @throws IOException
+   */
+  public String getLiveReloadClient() throws IOException {
+    if (this.liveReloadClient == null) {
+      final StringBuilder sb = new StringBuilder();
+      sb.append("<script text=\"javascript\">");
+      final InputStream in = getClass().getResourceAsStream("/live-reload.js");
+      try {
+        sb.append(IOUtils.toString(in));
+      } finally {
+        in.close();
+      }
+      sb.append("</script>");
+      this.liveReloadClient = sb.toString();
+    }
+    return this.liveReloadClient;
   }
 
   /**

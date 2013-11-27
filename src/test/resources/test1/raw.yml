@@ -1,0 +1,9 @@
+dev-server:
+    proxyhost: localhost
+    proxyport: 3000
+environments:
+    raw:
+        templates: raw
+        files:
+            folder:
+                - "src/test/resources/test1"

@@ -2,7 +2,6 @@ package de.matrixweb.smaller.dev.server;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -17,9 +16,10 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +29,9 @@ import com.google.common.base.Joiner;
 import de.matrixweb.smaller.common.SmallerException;
 import de.matrixweb.smaller.common.Task;
 import de.matrixweb.smaller.common.Version;
+import de.matrixweb.smaller.config.DevServer;
+import de.matrixweb.smaller.config.Environment;
+import de.matrixweb.smaller.config.Processor;
 import de.matrixweb.smaller.dev.server.templates.Engine;
 import de.matrixweb.smaller.dev.server.templates.TemplateEngine;
 import de.matrixweb.smaller.dev.server.tests.TestFramework;
@@ -41,6 +44,7 @@ import de.matrixweb.smaller.resource.impl.JavaEEProcessorFactory;
 import de.matrixweb.vfs.VFS;
 import de.matrixweb.vfs.VFSUtils;
 import de.matrixweb.vfs.VFile;
+import de.matrixweb.vfs.scanner.ResourceScanner;
 import de.matrixweb.vfs.scanner.VFSResourceLister;
 import de.matrixweb.vfs.wrapped.JavaFile;
 import de.matrixweb.vfs.wrapped.MergingVFS;
@@ -55,7 +59,9 @@ public class SmallerResourceHandler {
   private static final Logger LOGGER = LoggerFactory
       .getLogger(SmallerResourceHandler.class);
 
-  private final Config config;
+  private DevServer devServer;
+
+  private final Environment env;
 
   private ProcessorFactory processorFactory;
 
@@ -65,41 +71,40 @@ public class SmallerResourceHandler {
 
   private Task task;
 
-  private Task jsTask;
-
-  private Task cssTask;
-
   private Pipeline pipeline;
 
   private final ResourceWatchdog resourceWatchdog;
 
   private final TemplateEngine templateEngine;
 
-  private String liveReloadClient = null;
-
   private TestRunner testRunner;
 
   private final Map<String, Map<String, Object>> configCache = new HashMap<>();
 
+  private ResourceScanner resourceScanner;
+
   /**
-   * @param config
+   * @param devServer
+   * @param env
    * @throws IOException
    */
-  public SmallerResourceHandler(final Config config) throws IOException {
+  public SmallerResourceHandler(final DevServer devServer, final Environment env)
+      throws IOException {
     try {
-      this.config = config;
+      this.devServer = devServer;
+      this.env = env;
       this.vfs = new VFS();
-      this.resourceWatchdog = new ResourceWatchdog(this, config);
+      this.resourceWatchdog = new ResourceWatchdog(this, env);
       prepareVfs();
-      if (config.getProcess() != null) {
+      if (env.getProcess() != null) {
         this.processorFactory = new JavaEEProcessorFactory();
         this.resolver = new VFSResourceResolver(this.vfs);
         this.pipeline = new Pipeline(this.processorFactory);
-        setupTasks(config);
+        setupTasks();
       }
-      this.templateEngine = Engine.get(this.config.getTemplateEngine()).create(
-          this.vfs);
-      this.testRunner = TestFramework.get(config.getTestFramework()).create();
+      this.templateEngine = Engine.get(env.getTemplateEngine())
+          .create(this.vfs);
+      this.testRunner = TestFramework.get(env.getTestFramework()).create();
 
       smallerResources(null);
     } catch (IOException | RuntimeException e) {
@@ -108,87 +113,88 @@ public class SmallerResourceHandler {
     }
   }
 
-  private void setupTasks(final Config config) {
-    if (this.config.getProcessors() != null) {
-      this.task = new Task(this.config.getProcessors(), StringUtils.join(
-          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
-          ','));
+  private void setupTasks() {
+    if (this.env.getPipeline() != null) {
+      final String processors = StringUtils.join(this.env.getPipeline(), ',');
+      final String inputFiles = StringUtils.join(CollectionUtils.collect(
+          this.env.getProcessors().values(), new Transformer() {
+            @Override
+            public Object transform(final Object input) {
+              return ((Processor) input).getSrc();
+            }
+          }), ',');
+      this.task = new Task(processors, inputFiles, StringUtils.join(
+          this.env.getProcess(), ','));
       this.task
-          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
-    }
-    if (config.getJsProcessors() != null) {
-      this.jsTask = new Task(this.config.getJsProcessors(), StringUtils.join(
-          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
-          ','));
-      this.jsTask
-          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
-    }
-    if (config.getCssProcessors() != null) {
-      this.cssTask = new Task(this.config.getCssProcessors(), StringUtils.join(
-          this.config.getIn(), ','), StringUtils.join(this.config.getProcess(),
-          ','));
-      this.cssTask
           .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
     }
   }
 
   private final void prepareVfs() throws IOException {
     final List<WrappedSystem> mergedRoot = new ArrayList<>();
-    for (final File root : this.config.getDocumentRoots()) {
-      mergedRoot.add(new JavaFile(root));
+    for (final String root : this.env.getFiles().getFolder()) {
+      mergedRoot.add(new JavaFile(new File(root)));
     }
     this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
+
+    this.resourceScanner = new ResourceScanner(new VFSResourceLister(this.vfs),
+        this.env.getFiles().getIncludes(), this.env.getFiles().getExcludes());
   }
 
   void smallerResources(final List<String> changedResources) {
-    SmallerResourceHandler.LOGGER.debug("Changed resources: {}",
-        changedResources);
+    if (changedResources != null) {
+      changedResources.retainAll(this.resourceScanner.getResources());
+    }
+    if (changedResources == null || !changedResources.isEmpty()) {
+      SmallerResourceHandler.LOGGER.info("Changed resources: {}",
+          changedResources);
 
-    final MutableBoolean fullReload = new MutableBoolean(
-        this.config.isForceFullReload());
-    String jsReload = null;
-    String cssReload = null;
-    @SuppressWarnings("unchecked")
-    List<String> remaining = changedResources != null ? new ArrayList<>(
-        changedResources) : Collections.EMPTY_LIST;
-    if (remaining.size() > 0) {
-      remaining = cleanupConfigCache(changedResources, fullReload);
-    }
-    if (remaining.size() > 0) {
-      remaining = recompileTemplates(remaining, fullReload);
-    }
-    if (changedResources == null || remaining.size() > 0) {
-      if (this.task != null || this.jsTask != null || this.cssTask != null) {
-        try {
-          if (this.task != null) {
-            executeSmallerTask(changedResources, this.task, true);
-            fullReload.setValue(true);
-          } else {
-            // TODO: Check if changed resources are within the task to execute
-            if (this.jsTask != null) {
-              executeSmallerTask(changedResources, this.jsTask, true);
-              jsReload = getProcessByExtension(".js");
-            }
-            if (this.cssTask != null) {
-              executeSmallerTask(changedResources, this.cssTask, false);
-              cssReload = getProcessByExtension(".css");
-            }
-          }
-        } catch (final SmallerException e) {
-          SmallerResourceHandler.LOGGER.error("Failed to process resources", e);
-        }
+      final MutableBoolean fullReload = new MutableBoolean(false);
+      String jsReload = null;
+      String cssReload = null;
+      @SuppressWarnings("unchecked")
+      List<String> remaining = changedResources != null ? new ArrayList<>(
+          changedResources) : Collections.EMPTY_LIST;
+      if (remaining.size() > 0) {
+        remaining = cleanupConfigCache(changedResources, fullReload);
       }
+      if (remaining.size() > 0) {
+        remaining = recompileTemplates(remaining, fullReload);
+      }
+      if (changedResources == null || remaining.size() > 0) {
+        if (this.task != null) {
+          try {
+            final long start = System.currentTimeMillis();
+
+            executeSmallerTask(changedResources, this.task);
+
+            for (final String out : this.task.getOut()) {
+              if (start < this.vfs.find(out).getLastModified()) {
+                if (out.endsWith(".js")) {
+                  jsReload = out;
+                } else if (out.endsWith(".css")) {
+                  cssReload = out;
+                }
+              }
+            }
+          } catch (IOException | SmallerException e) {
+            SmallerResourceHandler.LOGGER.error("Failed to process resources",
+                e);
+          }
+        }
+        fullReload.setValue(fullReload.booleanValue() || jsReload != null
+            && cssReload != null || jsReload != null
+            && this.devServer.isForceFullReload());
+      }
+      LOGGER.info("Reload: {}, {}, {}",
+          new Object[] { fullReload.booleanValue(), jsReload, cssReload });
+      LiveReloadSocket.broadcastReload(fullReload.booleanValue(), jsReload,
+          cssReload);
     }
-    LiveReloadSocket.broadcastReload(fullReload.booleanValue(), jsReload,
-        cssReload);
   }
 
   private void executeSmallerTask(final List<String> changedResources,
-      final Task task, final boolean runTests) {
-    final VFSResourceLister lister = new VFSResourceLister(this.vfs);
-    // config.getJsProcessors();
-    // config.getCssProcessors();
-
+      final Task task) {
     // TODO: Check if test-resources was changed
     // => rebuild test resources
     // => rerun tests
@@ -197,12 +203,17 @@ public class SmallerResourceHandler {
     this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
         task);
 
-    if (runTests && this.config.getTestFolder() != null) {
+    if (this.env.getTestFiles() != null) {
       final VFS testVfs = new VFS();
       try {
+        final List<WrappedSystem> mounts = new ArrayList<>();
+        mounts.add(new WrappedVFS(this.vfs.find("/")));
+        for (final String folder : this.env.getTestFiles().getFolder()) {
+          mounts.add(new JavaFile(new File(folder)));
+        }
         testVfs.mount(testVfs.find("/"),
-            new MergingVFS(new WrappedVFS(this.vfs.find("/")), new JavaFile(
-                this.config.getTestFolder())));
+            new MergingVFS(mounts.toArray(new WrappedSystem[mounts.size()])));
+
         this.testRunner.run(testVfs);
       } catch (final IOException e) {
         SmallerResourceHandler.LOGGER.error("Failed to execute tests", e);
@@ -210,15 +221,6 @@ public class SmallerResourceHandler {
         testVfs.dispose();
       }
     }
-  }
-
-  private String getProcessByExtension(final String extension) {
-    for (final String process : this.config.getProcess()) {
-      if (process.endsWith(extension)) {
-        return process;
-      }
-    }
-    return null;
   }
 
   private List<String> cleanupConfigCache(final List<String> changedResources,
@@ -277,21 +279,38 @@ public class SmallerResourceHandler {
   }
 
   /**
+   * @param file
+   * @return Returns true if the given file path is in this resource handlers
+   *         file set
+   */
+  public boolean hasFile(final String file) {
+    return this.resourceScanner.getResources().contains(file);
+  }
+
+  /**
+   * @return the templateEngine
+   */
+  TemplateEngine getTemplateEngine() {
+    return this.templateEngine;
+  }
+
+  /**
    * @param out
    * @param request
    * @param response
    * @param uri
+   * @param liveReloadCode
    * @throws IOException
    */
   public void renderTemplate(final OutputStream out,
       final HttpServletRequest request, final HttpServletResponse response,
-      final String uri) throws IOException {
+      final String uri, final String liveReloadCode) throws IOException {
     String path = uri;
     if ("/".equals(path)) {
       path += "index.html";
     }
     final Map<String, Object> data = loadRequestConfiguration(path, request);
-    renderTemplate(out, request, response, path, data, false);
+    renderTemplate(out, request, response, path, data, liveReloadCode);
   }
 
   /**
@@ -300,14 +319,14 @@ public class SmallerResourceHandler {
    * @param response
    * @param uri
    * @param data
-   * @param partial
+   * @param liveReloadCode
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public void renderTemplate(final OutputStream out,
       final HttpServletRequest request, final HttpServletResponse response,
-      final String uri, final Map<String, Object> data, final boolean partial)
-      throws IOException {
+      final String uri, final Map<String, Object> data,
+      final String liveReloadCode) throws IOException {
     String path = uri;
     final PrintWriter writer = new PrintWriter(out);
     if (data.containsKey("jsonResponse")) {
@@ -329,31 +348,11 @@ public class SmallerResourceHandler {
       }
       writer.write(this.templateEngine.render(path, data,
           (Map<String, Object>) data.get("templateData")));
-      if (!partial && this.config.isLiveReload()) {
-        writer.write(getLiveReloadClient());
+      if (liveReloadCode != null && this.devServer.isLiveReload()) {
+        writer.write(liveReloadCode);
       }
     }
     writer.flush();
-  }
-
-  /**
-   * @return Returns the live-reload client code
-   * @throws IOException
-   */
-  public String getLiveReloadClient() throws IOException {
-    if (this.liveReloadClient == null) {
-      final StringBuilder sb = new StringBuilder();
-      sb.append("<script text=\"javascript\">");
-      final InputStream in = getClass().getResourceAsStream("/live-reload.js");
-      try {
-        sb.append(IOUtils.toString(in));
-      } finally {
-        in.close();
-      }
-      sb.append("</script>");
-      this.liveReloadClient = sb.toString();
-    }
-    return this.liveReloadClient;
   }
 
   /**

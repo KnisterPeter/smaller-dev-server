@@ -14,14 +14,16 @@
       } else {
         if (js) {
           var node = document.querySelector('script[src^="' + js + '"]');
-          node.parentNode.removeChild(node);
-          var script = document.createElement("script");
-          script.setAttribute('src', js);
-          document.body.appendChild(script);
+          if (node) {
+            node.parentNode.removeChild(node);
+            var script = document.createElement("script");
+            script.setAttribute('src', js);
+            document.body.appendChild(script);
+          }
         }
         if (css) {
           var node = document.querySelector('link[href^="' + css + '"]');
-          node.setAttribute('href', node.getAttribute('href'));
+          node && node.setAttribute('href', node.getAttribute('href'));
         }
       }
     } else if (message.kind === 'ping') {

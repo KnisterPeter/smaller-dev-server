@@ -19,7 +19,7 @@ public class VelocityTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t velocity";
+    return "@src/test/resources/test1/vm.yml";
   }
 
   /**

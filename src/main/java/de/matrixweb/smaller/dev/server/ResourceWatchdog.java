@@ -14,6 +14,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.matrixweb.smaller.config.Environment;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemClosedWatchServiceException;
 import de.matrixweb.smaller.dev.server.watch.FileSystemWatch.FileSystemWatchKey;
@@ -29,7 +30,7 @@ public class ResourceWatchdog {
 
   private final SmallerResourceHandler resourceHandler;
 
-  private final Config config;
+  private final Environment env;
 
   private final FileSystemWatch watcher;
 
@@ -47,23 +48,25 @@ public class ResourceWatchdog {
 
   /**
    * @param resourceHandler
-   * @param config
+   * @param env
    * @throws IOException
    */
   public ResourceWatchdog(final SmallerResourceHandler resourceHandler,
-      final Config config) throws IOException {
+      final Environment env) throws IOException {
     this.resourceHandler = resourceHandler;
-    this.config = config;
+    this.env = env;
     this.watches = new HashMap<FileSystemWatchKey, Path>();
-    this.watcher = FileSystemWatch.Factory.create(config, this.watches);
-    for (final File root : config.getDocumentRoots()) {
+    this.watcher = FileSystemWatch.Factory.create(this.watches);
+
+    for (final String root : env.getFiles().getFolder()) {
       LOGGER.debug("Watching {}", root);
-      this.watcher.register(Paths.get(root.getPath()));
+      this.watcher.register(Paths.get(root));
     }
-    if (config.getTestFolder() != null) {
-      LOGGER.debug("Watching {}", config.getTestFolder());
-      this.watcher.register(Paths.get(config.getTestFolder().getPath()));
+    for (final String root : env.getTestFiles().getFolder()) {
+      LOGGER.debug("Watching {}", root);
+      this.watcher.register(Paths.get(root));
     }
+
     final Thread thread = new Thread(this.watchdog, "Smaller Resource Watchdog");
     thread.setDaemon(true);
     thread.start();
@@ -130,30 +133,26 @@ public class ResourceWatchdog {
       LOGGER.warn("Unable to create absolute canonical path for {}: {}", file,
           e.getMessage());
     }
-    for (File root : this.config.getDocumentRoots()) {
-      try {
-        root = root.getAbsoluteFile().getCanonicalFile();
-      } catch (final IOException e) {
-        LOGGER.warn("Unable to create absolute canonical path for {}: {}",
-            root, e.getMessage());
-      }
-      LOGGER.debug("Check root path {} and change {}", root, file);
-      if (file.getPath().startsWith(root.getPath())) {
-        changedResources.add(file.getPath().substring(root.getPath().length()));
-      }
+    for (final String folder : this.env.getFiles().getFolder()) {
+      findResourceRoot(changedResources, file, folder);
     }
-    File test = this.config.getTestFolder();
-    if (test != null) {
-      try {
-        test = test.getAbsoluteFile().getCanonicalFile();
-      } catch (final IOException e) {
-        LOGGER.warn("Unable to create absolute canonical path for {}: {}",
-            test, e.getMessage());
-      }
-      if (child.startsWith(test.getPath())) {
-        changedResources.add(child.toFile().getPath()
-            .substring(test.getPath().length()));
-      }
+    for (final String folder : this.env.getTestFiles().getFolder()) {
+      findResourceRoot(changedResources, file, folder);
+    }
+  }
+
+  private void findResourceRoot(final List<String> changedResources,
+      final File file, final String folder) {
+    File root = new File(folder);
+    try {
+      root = root.getAbsoluteFile().getCanonicalFile();
+    } catch (final IOException e) {
+      LOGGER.warn("Unable to create absolute canonical path for {}: {}", root,
+          e.getMessage());
+    }
+    LOGGER.debug("Check root path {} and change {}", root, file);
+    if (file.getPath().startsWith(root.getPath())) {
+      changedResources.add(file.getPath().substring(root.getPath().length()));
     }
   }
 

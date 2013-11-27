@@ -22,7 +22,7 @@ public abstract class AbstractDevServerTest {
       devServer = new DevServer(getServerArgs().split(" "));
       new Thread(devServer).start();
       boolean retry = true;
-      while (retry) {
+      while (retry && devServer.server != null) {
         try {
           Thread.sleep(1000);
           new Socket("localhost", 12345);
@@ -49,7 +49,7 @@ public abstract class AbstractDevServerTest {
 
     private final String[] args;
 
-    private final Main server = new Main();
+    private Main server = new Main();
 
     public DevServer(final String... args) {
       this.args = args;
@@ -60,14 +60,17 @@ public abstract class AbstractDevServerTest {
       try {
         this.server.start(this.args);
       } catch (final Exception e) {
+        stop();
         throw new RuntimeException(e);
       }
     }
 
     public void stop() {
-      this.server.stop();
+      if (this.server != null) {
+        this.server.stop();
+        this.server = null;
+      }
     }
-
   }
 
 }

@@ -19,7 +19,7 @@ public class HandlebarsTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1 -t handlebars";
+    return "@src/test/resources/test1/hbs.yml";
   }
 
   /**

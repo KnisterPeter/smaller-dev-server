@@ -7,11 +7,12 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -22,7 +23,9 @@ import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import de.matrixweb.smaller.common.SmallerException;
 import de.matrixweb.smaller.config.ConfigFile;
+import de.matrixweb.smaller.config.DevServer;
 import de.matrixweb.smaller.config.Environment;
 
 /**
@@ -32,7 +35,7 @@ public class Main {
 
   private Logger logger;
 
-  private SmallerResourceHandler resourceHandler;
+  private Map<Environment, SmallerResourceHandler> resourceHandlers;
 
   private Server server;
 
@@ -51,26 +54,33 @@ public class Main {
   public void start(final String... args) throws Exception {
     Locale.setDefault(Locale.ENGLISH);
 
-    final Config config = parseArgs(setupFromConfigFile(args));
+    final Cmdline config = parseArgs(args);
     if (config == null) {
       return;
     }
+    final ConfigFile configFile = parseConfigFile(args);
+    updateConfigFileFromCmdLine(configFile, config);
 
     System.setProperty("logback.configurationFile", "logback-dev-server.xml");
     final LoggerContext loggerContext = (LoggerContext) LoggerFactory
         .getILoggerFactory();
     this.logger = loggerContext.getLogger("de.matrixweb");
-    if (config.isDebug()) {
+    if (configFile.getDevServer().isDebug()) {
       this.logger.setLevel(Level.DEBUG);
       this.logger.debug("Enabled verbose logging");
     } else {
       loggerContext.getLogger("de.matrixweb.smaller").setLevel(Level.INFO);
     }
 
-    this.resourceHandler = new SmallerResourceHandler(config);
-    final Servlet servlet = new Servlet(config, this.resourceHandler);
-    this.server = new Server(InetSocketAddress.createUnresolved(
-        config.getHost(), config.getPort()));
+    this.resourceHandlers = new HashMap<>();
+    for (final Environment env : configFile.getEnvironments().values()) {
+      this.resourceHandlers.put(env,
+          new SmallerResourceHandler(configFile.getDevServer(), env));
+    }
+
+    final Servlet servlet = new Servlet(configFile, this.resourceHandlers);
+    this.server = new Server(InetSocketAddress.createUnresolved(configFile
+        .getDevServer().getIp(), configFile.getDevServer().getPort()));
     final ServletContextHandler handler = new ServletContextHandler();
     handler.addServlet(new ServletHolder(servlet), "/");
     this.server.setHandler(handler);
@@ -93,114 +103,58 @@ public class Main {
    * 
    */
   public void stop() {
-    this.logger.info("Stopping server");
-    if (this.resourceHandler != null) {
-      try {
-        this.resourceHandler.dispose();
-      } catch (final IOException e) {
-        this.logger.error("Failed to shutdown watchdog", e);
+    logInfo("Stopping server");
+    if (this.resourceHandlers != null) {
+      for (final SmallerResourceHandler handler : this.resourceHandlers
+          .values()) {
+        try {
+          handler.dispose();
+        } catch (final IOException e) {
+          logError("Failed to shutdown resource handler", e);
+        }
       }
     }
     if (this.server != null) {
       try {
         this.server.stop();
       } catch (final Exception e) {
-        this.logger.error("Failed to shutdown jetty", e);
+        logError("Failed to shutdown jetty", e);
       }
     }
   }
 
-  private String[] setupFromConfigFile(final String... args) throws IOException {
-    final List<String> result = new ArrayList<>();
+  private ConfigFile parseConfigFile(final String... args) throws IOException {
+    ConfigFile configFile = null;
+
     final Iterator<String> it = Arrays.asList(args).iterator();
     while (it.hasNext()) {
       final String arg = it.next();
       if (arg.startsWith("@")) {
-        final ConfigFile config = ConfigFile.read(new File(arg.substring(1)));
-        final Environment env = config.getEnvironments().values().iterator()
-            .next();
-        for (final String folder : env.getFiles().getFolder()) {
-          result.add("--document-root");
-          result.add(folder);
+        if (configFile != null) {
+          throw new SmallerException("Found multiple config files");
         }
-        if (config.getDevServer().isDebug()) {
-          result.add("--verbose");
-        }
-        if (config.getDevServer().isLiveReload()) {
-          result.add("--live-reload");
-          if (config.getDevServer().isForceFullReload()) {
-            result.add("--force-full-reload");
-          }
-        }
-        if (config.getDevServer().getIp() != null) {
-          result.add("--ip");
-          result.add(config.getDevServer().getIp());
-        }
-        if (config.getDevServer().getPort() > 0) {
-          result.add("--port");
-          result.add(String.valueOf(config.getDevServer().getPort()));
-        }
-        if (config.getDevServer().getProxyhost() != null) {
-          result.add("--proxyhost");
-          result.add(config.getDevServer().getProxyhost());
-        }
-        if (config.getDevServer().getProxyport() > 0) {
-          result.add("--proxyport");
-          result.add(String.valueOf(config.getDevServer().getProxyport()));
-        }
-        if (env.getTemplateEngine() != null) {
-          result.add("--template-engine");
-          result.add(env.getTemplateEngine());
-        }
-        if (env.getTestFramework() != null) {
-          result.add("--test-framework");
-          result.add(env.getTestFramework());
-          result.add("--test-directory");
-          result.add(env.getTestFiles().getFolder()[0]);
-        }
-        for (final String process : env.getProcess()) {
-          result.add("--process");
-          result.add(process);
-        }
-        if (env.getProcessors() != null) {
-          if (env.getProcessors().get("js") != null) {
-            result.add("--js-processors");
-            result.add(StringUtils.join(env.getProcessors().get("js"), ','));
-          }
-          if (env.getProcessors().get("css") != null) {
-            result.add("--css-processors");
-            result.add(StringUtils.join(env.getProcessors().get("css"), ','));
-          }
-        }
-
-        final List<String> inFiles = new ArrayList<>(2);
-        for (final String[] values : env.getPipeline().values()) {
-          inFiles.add(env.getProcessors().get(values[0]).getSrc()[0]);
-        }
-        for (final String in : inFiles) {
-          result.add("--in");
-          result.add(in);
-        }
-        if (config.getDevServer().isInjectPartials()) {
-          result.add("--inject-partials");
-        }
-
-        // TODO: Configuration
-        // config.getTasks();
-      } else {
-        result.add(arg);
+        configFile = ConfigFile.read(new File(arg.substring(1)));
       }
     }
-    return result.toArray(new String[result.size()]);
+
+    if (configFile == null) {
+      configFile = new ConfigFile();
+    }
+    return configFile;
   }
 
-  private Config parseArgs(final String... args) {
-    final Config config = new Config();
+  private Cmdline parseArgs(final String... args) {
+    final Cmdline config = new Cmdline();
     final CmdLineParser parser = new CmdLineParser(config);
     parser.setUsageWidth(80);
     try {
-      parser.parseArgument(args);
-      config.checkValid(parser);
+      final List<String> params = new ArrayList<>();
+      for (final String arg : args) {
+        if (!arg.startsWith("@")) {
+          params.add(arg);
+        }
+      }
+      parser.parseArgument(params);
       if (config.isHelp()) {
         parser.printUsage(new PrintWriter(System.err), null);
         return null;
@@ -211,6 +165,49 @@ public class Main {
       return null;
     }
     return config;
+  }
+
+  private void updateConfigFileFromCmdLine(final ConfigFile configFile,
+      final Cmdline cmdline) {
+    final DevServer dev = configFile.getDevServer();
+    if (cmdline.getHost() != null) {
+      dev.setIp(cmdline.getHost());
+    }
+    if (cmdline.getPort() != null) {
+      dev.setPort(cmdline.getPort());
+    }
+    if (cmdline.getProxyhost() != null) {
+      dev.setProxyhost(cmdline.getProxyhost());
+    }
+    if (cmdline.getProxyport() != null) {
+      dev.setProxyport(cmdline.getProxyport());
+    }
+    if (cmdline.getDebug() != null) {
+      dev.setDebug(cmdline.getDebug());
+    }
+    if (cmdline.getForceFullReload() != null) {
+      dev.setForceFullReload(cmdline.getForceFullReload());
+    }
+    if (cmdline.getLiveReload() != null) {
+      dev.setLiveReload(cmdline.getLiveReload());
+    }
+  }
+
+  private void logInfo(final String msg) {
+    if (this.logger != null) {
+      this.logger.info(msg);
+    } else {
+      System.out.println(msg);
+    }
+  }
+
+  private void logError(final String msg, final Exception e) {
+    if (this.logger != null) {
+      this.logger.error(msg, e);
+    } else {
+      System.err.println(msg);
+      e.printStackTrace(System.err);
+    }
   }
 
 }

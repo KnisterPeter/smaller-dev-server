@@ -16,8 +16,6 @@ import com.barbarysoftware.watchservice.WatchKey;
 import com.barbarysoftware.watchservice.WatchService;
 import com.barbarysoftware.watchservice.WatchableFile;
 
-import de.matrixweb.smaller.dev.server.Config;
-
 /**
  * @author marwol
  */
@@ -25,14 +23,14 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
 
   private final WatchService watchService;
 
-  private Map<FileSystemWatchKey, Path> watches;
+  private final Map<FileSystemWatchKey, Path> watches;
 
   /**
-   * 
+   * @param watches
    */
-  public MacOsFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) {
+  public MacOsFileSystemWatch(final Map<FileSystemWatchKey, Path> watches) {
     this.watches = watches;
-    watchService = WatchService.newWatchService();
+    this.watchService = WatchService.newWatchService();
   }
 
   /**
@@ -40,11 +38,20 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public void register(final Path path) throws IOException {
-    watches.put(new MacOsWatchKey(new WatchableFile(path.toFile()).register(
-        this.watchService, StandardWatchEventKind.OVERFLOW,
-        StandardWatchEventKind.ENTRY_CREATE,
-        StandardWatchEventKind.ENTRY_MODIFY,
-        StandardWatchEventKind.ENTRY_DELETE)), path);
+    boolean watching = false;
+    for (final Path current : this.watches.values()) {
+      if (path.startsWith(current)) {
+        watching = true;
+      }
+    }
+    if (!watching) {
+      this.watches.put(
+          new MacOsWatchKey(new WatchableFile(path.toFile()).register(
+              this.watchService, StandardWatchEventKind.OVERFLOW,
+              StandardWatchEventKind.ENTRY_CREATE,
+              StandardWatchEventKind.ENTRY_MODIFY,
+              StandardWatchEventKind.ENTRY_DELETE)), path);
+    }
   }
 
   /**
@@ -54,7 +61,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
   public FileSystemWatchKey take() throws InterruptedException {
     try {
       return new MacOsWatchKey(this.watchService.take());
-    } catch (ClosedWatchServiceException e) {
+    } catch (final ClosedWatchServiceException e) {
       throw new FileSystemClosedWatchServiceException();
     }
   }
@@ -128,7 +135,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
       if (getClass() != obj.getClass()) {
         return false;
       }
-      MacOsWatchKey other = (MacOsWatchKey) obj;
+      final MacOsWatchKey other = (MacOsWatchKey) obj;
       if (this.watchKey == null) {
         if (other.watchKey != null) {
           return false;
@@ -170,7 +177,7 @@ public class MacOsFileSystemWatch implements FileSystemWatch {
     @Override
     @SuppressWarnings("unchecked")
     public T context() {
-      Path path = ((File) this.watchEvent.context()).toPath();
+      final Path path = ((File) this.watchEvent.context()).toPath();
       return (T) path;
     }
 

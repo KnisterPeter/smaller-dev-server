@@ -18,21 +18,21 @@ import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
 
-import de.matrixweb.smaller.dev.server.Config;
-
 /**
  * @author marwol
  */
 public class DefaultFileSystemWatch implements FileSystemWatch {
 
   private final WatchService watchService;
-  
-  private Map<FileSystemWatchKey, Path> watches;
+
+  private final Map<FileSystemWatchKey, Path> watches;
 
   /**
+   * @param watches
    * @throws IOException
    */
-  public DefaultFileSystemWatch(Config config, final Map<FileSystemWatchKey, Path> watches) throws IOException {
+  public DefaultFileSystemWatch(final Map<FileSystemWatchKey, Path> watches)
+      throws IOException {
     this.watches = watches;
     this.watchService = FileSystems.getDefault().newWatchService();
   }
@@ -42,18 +42,21 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
    */
   @Override
   public void register(final Path path) throws IOException {
-      Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-        @Override
-        public FileVisitResult preVisitDirectory(final Path dir,
-            final BasicFileAttributes attrs) throws IOException {
-          FileSystemWatchKey key = new DefaultWatchKey(dir.register(watchService,
+    Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+      @Override
+      public FileVisitResult preVisitDirectory(final Path dir,
+          final BasicFileAttributes attrs) throws IOException {
+        if (!DefaultFileSystemWatch.this.watches.containsValue(dir)) {
+          final FileSystemWatchKey key = new DefaultWatchKey(dir.register(
+              DefaultFileSystemWatch.this.watchService,
               StandardWatchEventKinds.ENTRY_CREATE,
               StandardWatchEventKinds.ENTRY_MODIFY,
               StandardWatchEventKinds.ENTRY_DELETE));
-          watches.put(key, dir);
-          return FileVisitResult.CONTINUE;
+          DefaultFileSystemWatch.this.watches.put(key, dir);
         }
-      });
+        return FileVisitResult.CONTINUE;
+      }
+    });
   }
 
   /**
@@ -63,7 +66,7 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
   public FileSystemWatchKey take() throws InterruptedException {
     try {
       return new DefaultWatchKey(this.watchService.take());
-    } catch (ClosedWatchServiceException e) {
+    } catch (final ClosedWatchServiceException e) {
       throw new FileSystemClosedWatchServiceException();
     }
   }
@@ -137,7 +140,7 @@ public class DefaultFileSystemWatch implements FileSystemWatch {
       if (getClass() != obj.getClass()) {
         return false;
       }
-      DefaultWatchKey other = (DefaultWatchKey) obj;
+      final DefaultWatchKey other = (DefaultWatchKey) obj;
       if (this.watchKey == null) {
         if (other.watchKey != null) {
           return false;

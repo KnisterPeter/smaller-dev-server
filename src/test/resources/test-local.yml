@@ -1,0 +1,56 @@
+dev-server:
+    proxyhost: localhost 
+    proxyport: 3000 
+    debug: true
+    live-reload: true
+environments:
+    js:
+        process:
+            - "/app.js"
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.coffee"
+                - "**/*.js"
+        processors:
+            coffeeScript:
+                src: "/main.coffee"
+            browserify:
+                dest: "/app.js"
+        pipeline:
+            - coffeeScript
+            - browserify
+    css:
+        process:
+            - "/style.css"
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.less"
+                - "**/*.css"
+        processors:
+            lessjs:
+                src: "/main.less"
+                dest: "/style.css"
+        pipeline:
+            - lessjs
+    templates:
+        templates: handlebars
+        files:
+            folder:
+                - "../src/test/resources/fldr1"
+                - "../src/test/resources/fldr2"
+                - "../src/test/resources/test1"
+            includes:
+                - "**/*.hbs"
+    tests:
+        test-framework: jasmine
+        test-files:
+            folder:
+                - "../src/test/resources/tests/jasmine"

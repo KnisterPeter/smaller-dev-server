@@ -19,7 +19,7 @@ public class AjaxStubTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "--proxyhost localhost --proxyport 3000 -d src/test/resources/test1";
+    return "@src/test/resources/test1/ajax.yml";
   }
 
   /**

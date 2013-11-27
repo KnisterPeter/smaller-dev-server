@@ -23,6 +23,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import de.matrixweb.smaller.config.ConfigFile;
+import de.matrixweb.smaller.config.Environment;
 
 /**
  * @author markusw
@@ -116,7 +117,9 @@ public class Main {
       final String arg = it.next();
       if (arg.startsWith("@")) {
         final ConfigFile config = ConfigFile.read(new File(arg.substring(1)));
-        for (final String folder : config.getFiles().getFolder()) {
+        final Environment env = config.getEnvironments().values().iterator()
+            .next();
+        for (final String folder : env.getFiles().getFolder()) {
           result.add("--document-root");
           result.add(folder);
         }
@@ -145,17 +148,17 @@ public class Main {
           result.add("--proxyport");
           result.add(String.valueOf(config.getDevServer().getProxyport()));
         }
-        if (config.getDevServer().getTemplateEngine() != null) {
+        if (env.getTemplateEngine() != null) {
           result.add("--template-engine");
-          result.add(config.getDevServer().getTemplateEngine());
+          result.add(env.getTemplateEngine());
         }
-        if (config.getDevServer().getTests() != null) {
+        if (env.getTestFramework() != null) {
           result.add("--test-framework");
-          result.add(config.getDevServer().getTests().getFramework());
+          result.add(env.getTestFramework());
           result.add("--test-directory");
-          result.add(config.getDevServer().getTests().getFolder());
+          result.add(env.getTestFiles().getFolder()[0]);
         }
-        for (final String process : config.getDevServer().getProcess()) {
+        for (final String process : env.getProcess()) {
           result.add("--process");
           result.add(process);
         }
@@ -171,8 +174,9 @@ public class Main {
         }
 
         final List<String> inFiles = new ArrayList<>(2);
-        for (final String[] values : config.getProcessors().values()) {
-          inFiles.add(config.getTasks().get(values[0]).getSrc()[0]);
+        for (final String[] values : env.getPipeline().values()) {
+          processors.add(StringUtils.join(values, ','));
+          inFiles.add(env.getProcessors().get(values[0]).getSrc()[0]);
         }
         for (final String in : inFiles) {
           result.add("--in");

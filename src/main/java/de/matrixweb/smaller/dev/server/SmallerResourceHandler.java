@@ -38,10 +38,10 @@ import de.matrixweb.smaller.resource.ProcessorFactory;
 import de.matrixweb.smaller.resource.ResourceResolver;
 import de.matrixweb.smaller.resource.VFSResourceResolver;
 import de.matrixweb.smaller.resource.impl.JavaEEProcessorFactory;
-import de.matrixweb.vfs.ResourceScanner.VFSResourceLister;
 import de.matrixweb.vfs.VFS;
 import de.matrixweb.vfs.VFSUtils;
 import de.matrixweb.vfs.VFile;
+import de.matrixweb.vfs.scanner.VFSResourceLister;
 import de.matrixweb.vfs.wrapped.JavaFile;
 import de.matrixweb.vfs.wrapped.MergingVFS;
 import de.matrixweb.vfs.wrapped.WrappedSystem;
@@ -185,7 +185,7 @@ public class SmallerResourceHandler {
 
   private void executeSmallerTask(final List<String> changedResources,
       final Task task, final boolean runTests) {
-    VFSResourceLister lister = new VFSResourceLister(this.vfs);
+    final VFSResourceLister lister = new VFSResourceLister(this.vfs);
     // config.getJsProcessors();
     // config.getCssProcessors();
 
@@ -213,7 +213,7 @@ public class SmallerResourceHandler {
   }
 
   private String getProcessByExtension(final String extension) {
-    for (String process : this.config.getProcess()) {
+    for (final String process : this.config.getProcess()) {
       if (process.endsWith(extension)) {
         return process;
       }

@@ -162,20 +162,19 @@ public class Main {
           result.add("--process");
           result.add(process);
         }
-        if (config.getProcessors() != null) {
-          if (config.getProcessors().get("js") != null) {
+        if (env.getProcessors() != null) {
+          if (env.getProcessors().get("js") != null) {
             result.add("--js-processors");
-            result.add(StringUtils.join(config.getProcessors().get("js"), ','));
+            result.add(StringUtils.join(env.getProcessors().get("js"), ','));
           }
-          if (config.getProcessors().get("css") != null) {
+          if (env.getProcessors().get("css") != null) {
             result.add("--css-processors");
-            result.add(StringUtils.join(config.getProcessors().get("css"), ','));
+            result.add(StringUtils.join(env.getProcessors().get("css"), ','));
           }
         }
 
         final List<String> inFiles = new ArrayList<>(2);
         for (final String[] values : env.getPipeline().values()) {
-          processors.add(StringUtils.join(values, ','));
           inFiles.add(env.getProcessors().get(values[0]).getSrc()[0]);
         }
         for (final String in : inFiles) {

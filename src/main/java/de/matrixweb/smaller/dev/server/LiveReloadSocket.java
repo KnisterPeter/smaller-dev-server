@@ -57,17 +57,10 @@ public class LiveReloadSocket implements WebSocket.OnTextMessage {
   }
 
   /**
-   * @param full
-   * @param js
-   * @param css
+   * @param info
    */
-  public static void broadcastReload(final boolean full, final String js,
-      final String css) {
-    final Map<String, Object> map = new HashMap<>(3);
-    map.put("full", full);
-    map.put("js", js);
-    map.put("css", css);
-    broadcastMessage(createMessage("change", map));
+  public static void broadcastReload(final SmallerResourceHandler.PushInfo info) {
+    broadcastMessage(createMessage("change", info));
   }
 
   private static String createMessage(final String kind, final Object data) {

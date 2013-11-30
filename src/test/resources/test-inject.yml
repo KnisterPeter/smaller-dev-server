@@ -1,7 +1,7 @@
 dev-server:
     proxyhost: joop.com 
     proxyport: 80
-    debug: false
+    debug: true
     live-reload: true
     inject-partials: true
 environments:

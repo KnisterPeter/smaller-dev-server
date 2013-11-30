@@ -19,7 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,47 +149,89 @@ public class SmallerResourceHandler {
       SmallerResourceHandler.LOGGER.info("Changed resources: {}",
           changedResources);
 
-      final MutableBoolean fullReload = new MutableBoolean(false);
-      String jsReload = null;
-      String cssReload = null;
+      final PushInfo pushInfo = new PushInfo();
       @SuppressWarnings("unchecked")
       List<String> remaining = changedResources != null ? new ArrayList<>(
           changedResources) : Collections.EMPTY_LIST;
       if (remaining.size() > 0) {
-        remaining = cleanupConfigCache(changedResources, fullReload);
+        remaining = cleanupConfigCache(changedResources, pushInfo);
       }
       if (remaining.size() > 0) {
-        remaining = recompileTemplates(remaining, fullReload);
+        remaining = recompileTemplates(remaining, pushInfo);
       }
       if (changedResources == null || remaining.size() > 0) {
-        if (this.task != null) {
-          try {
-            final long start = System.currentTimeMillis();
+        recompileTask(changedResources, pushInfo);
+      }
+      LOGGER.debug(
+          "PushInfo: {}, {}, {}",
+          new Object[] { pushInfo.isFullReload(), pushInfo.getJs(),
+              pushInfo.getCss() });
+      LiveReloadSocket.broadcastReload(pushInfo);
+    }
+  }
 
-            executeSmallerTask(changedResources, this.task);
+  private List<String> cleanupConfigCache(final List<String> changedResources,
+      final PushInfo pushInfo) {
+    final List<String> remaining = new ArrayList<>(changedResources);
+    final Iterator<String> it = remaining.iterator();
+    while (it.hasNext()) {
+      final String change = it.next();
+      final String key = change.substring(0,
+          change.length() - ".cfg.json".length());
+      if (this.configCache.containsKey(key)) {
+        pushInfo.setFullReload(true);
+        this.configCache.remove(key);
+        it.remove();
+      }
+    }
+    return remaining;
+  }
 
-            for (final String out : this.task.getOut()) {
-              if (start < this.vfs.find(out).getLastModified()) {
-                if (out.endsWith(".js")) {
-                  jsReload = out;
-                } else if (out.endsWith(".css")) {
-                  cssReload = out;
-                }
-              }
+  private final List<String> recompileTemplates(
+      final List<String> changedResources, final PushInfo pushInfo) {
+    final List<String> remaining = new ArrayList<>(changedResources);
+    final Iterator<String> it = remaining.iterator();
+    while (it.hasNext()) {
+      final String path = it.next();
+      try {
+        if (this.templateEngine.compile(path)) {
+          pushInfo.setFullReload(true);
+          it.remove();
+        }
+      } catch (final IOException e) {
+        pushInfo.addMessage("Failed to compile template '" + path + "'");
+        SmallerResourceHandler.LOGGER.warn("Failed to compile template: "
+            + path, e);
+      }
+    }
+    return remaining;
+  }
+
+  private void recompileTask(final List<String> changedResources,
+      final PushInfo pushInfo) {
+    if (this.task != null) {
+      try {
+        final long start = System.currentTimeMillis();
+
+        executeSmallerTask(changedResources, this.task);
+
+        for (final String out : this.task.getOut()) {
+          if (start < this.vfs.find(out).getLastModified()) {
+            if (out.endsWith(".js")) {
+              pushInfo.setJs(out);
+            } else if (out.endsWith(".css")) {
+              pushInfo.setCss(out);
             }
-          } catch (IOException | SmallerException e) {
-            SmallerResourceHandler.LOGGER.error("Failed to process resources",
-                e);
           }
         }
-        fullReload.setValue(fullReload.booleanValue() || jsReload != null
-            && cssReload != null || jsReload != null
-            && this.devServer.isForceFullReload());
+      } catch (IOException | SmallerException e) {
+        final StringBuilder sb = new StringBuilder();
+        for (final Throwable t : ExceptionUtils.getThrowables(e)) {
+          sb.append(": ").append(t.getMessage());
+        }
+        pushInfo.addMessage("Failed to compile resources: " + sb.substring(2));
+        SmallerResourceHandler.LOGGER.error("Failed to process resources", e);
       }
-      LOGGER.info("Reload: {}, {}, {}",
-          new Object[] { fullReload.booleanValue(), jsReload, cssReload });
-      LiveReloadSocket.broadcastReload(fullReload.booleanValue(), jsReload,
-          cssReload);
     }
   }
 
@@ -221,42 +263,6 @@ public class SmallerResourceHandler {
         testVfs.dispose();
       }
     }
-  }
-
-  private List<String> cleanupConfigCache(final List<String> changedResources,
-      final MutableBoolean reload) {
-    final List<String> remaining = new ArrayList<>(changedResources);
-    final Iterator<String> it = remaining.iterator();
-    while (it.hasNext()) {
-      final String change = it.next();
-      final String key = change.substring(0,
-          change.length() - ".cfg.json".length());
-      if (this.configCache.containsKey(key)) {
-        reload.setValue(true);
-        this.configCache.remove(key);
-        it.remove();
-      }
-    }
-    return remaining;
-  }
-
-  private final List<String> recompileTemplates(
-      final List<String> changedResources, final MutableBoolean reload) {
-    final List<String> remaining = new ArrayList<>(changedResources);
-    final Iterator<String> it = remaining.iterator();
-    while (it.hasNext()) {
-      final String path = it.next();
-      try {
-        if (this.templateEngine.compile(path)) {
-          reload.setValue(true);
-          it.remove();
-        }
-      } catch (final IOException e) {
-        SmallerResourceHandler.LOGGER.warn("Failed to compile template: "
-            + path, e);
-      }
-    }
-    return remaining;
   }
 
   /**
@@ -446,6 +452,83 @@ public class SmallerResourceHandler {
     if (this.testRunner != null) {
       this.testRunner.dispose();
     }
+  }
+
+  /** */
+  public class PushInfo {
+
+    private List<String> messages = Collections.emptyList();
+
+    private boolean fullReload = false;
+
+    private String js = null;
+
+    private String css = null;
+
+    /**
+     * @param message
+     */
+    public void addMessage(final String message) {
+      if (this.messages.isEmpty()) {
+        this.messages = new ArrayList<>();
+      }
+      this.messages.add(message);
+    }
+
+    /**
+     * @return the messages
+     */
+    public List<String> getMessages() {
+      return this.messages;
+    }
+
+    /**
+     * @param fullReload
+     *          the fullReload to set
+     */
+    public void setFullReload(final boolean fullReload) {
+      this.fullReload = fullReload;
+    }
+
+    /**
+     * @return True if a full page reload is required
+     */
+    public boolean isFullReload() {
+      return this.messages.isEmpty()
+          && (this.fullReload || this.js != null && this.css != null || this.js != null
+              && SmallerResourceHandler.this.devServer.isForceFullReload());
+    }
+
+    /**
+     * @return the js
+     */
+    public String getJs() {
+      return this.js;
+    }
+
+    /**
+     * @param js
+     *          the js to set
+     */
+    public void setJs(final String js) {
+      this.js = js;
+    }
+
+    /**
+     * @return the css
+     */
+    public String getCss() {
+      return this.css;
+    }
+
+    /**
+     * @param css
+     *          the css to set
+     */
+    public void setCss(final String css) {
+      this.css = css;
+    }
+
   }
 
 }

@@ -310,7 +310,8 @@ public class Servlet extends WebSocketServlet {
    * @throws IOException
    */
   public String getLiveReloadClient() throws IOException {
-    if (this.liveReloadClient == null) {
+    if (this.liveReloadClient == null
+        || this.configFile.getDevServer().isDebug()) {
       final StringBuilder sb = new StringBuilder();
       sb.append("<script text=\"javascript\">");
       final InputStream in = getClass().getResourceAsStream("/live-reload.js");

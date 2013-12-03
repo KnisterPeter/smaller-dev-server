@@ -133,6 +133,7 @@ public class SmallerResourceHandler {
   private final void prepareVfs() throws IOException {
     final List<WrappedSystem> mergedRoot = new ArrayList<>();
     for (final String root : this.env.getFiles().getFolder()) {
+      LOGGER.debug("Added document-root: {}", root);
       mergedRoot.add(new JavaFile(new File(root)));
     }
     this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
@@ -146,8 +147,7 @@ public class SmallerResourceHandler {
       changedResources.retainAll(this.resourceScanner.getResources());
     }
     if (changedResources == null || !changedResources.isEmpty()) {
-      SmallerResourceHandler.LOGGER.info("Changed resources: {}",
-          changedResources);
+      LOGGER.info("Changed resources: {}", changedResources);
 
       final PushInfo pushInfo = new PushInfo();
       @SuppressWarnings("unchecked")
@@ -200,8 +200,7 @@ public class SmallerResourceHandler {
         }
       } catch (final IOException e) {
         pushInfo.addMessage("Failed to compile template '" + path + "'");
-        SmallerResourceHandler.LOGGER.warn("Failed to compile template: "
-            + path, e);
+        LOGGER.warn("Failed to compile template: " + path, e);
       }
     }
     return remaining;
@@ -230,7 +229,7 @@ public class SmallerResourceHandler {
           sb.append(": ").append(t.getMessage());
         }
         pushInfo.addMessage("Failed to compile resources: " + sb.substring(2));
-        SmallerResourceHandler.LOGGER.error("Failed to process resources", e);
+        LOGGER.error("Failed to process resources", e);
       }
     }
   }
@@ -258,7 +257,7 @@ public class SmallerResourceHandler {
 
         this.testRunner.run(testVfs);
       } catch (final IOException e) {
-        SmallerResourceHandler.LOGGER.error("Failed to execute tests", e);
+        LOGGER.error("Failed to execute tests", e);
       } finally {
         testVfs.dispose();
       }
@@ -273,6 +272,7 @@ public class SmallerResourceHandler {
    */
   public void process(final OutputStream out,
       final HttpServletResponse response, final String uri) throws IOException {
+    LOGGER.debug("Reply with smaller-resource at '{}'", uri);
     if (uri.endsWith("js")) {
       response.setContentType("application/javascript");
     } else if (uri.endsWith("css")) {

@@ -249,9 +249,12 @@ public class Servlet extends WebSocketServlet {
   }
 
   @SuppressWarnings("unchecked")
-  private void injectPartials(final Document doc, final String uri,
+  private void injectPartials(final Document doc, String uri,
       final HttpServletRequest request) throws IOException,
       UnsupportedEncodingException {
+    if (uri.endsWith("/")) {
+      uri += "index.html";
+    }
     LOGGER.info("Injecting partials for uri: {}", uri);
 
     final Environment env = findEnvironmentByFile(uri);

@@ -1,0 +1,10 @@
+{
+  "": {
+    "partials": {
+      ".box.links": {
+        "mode": "appendChild",
+        "partial" : "/de/de/insert-left.hbs"
+      }
+    }
+  }
+}

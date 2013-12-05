@@ -316,12 +316,11 @@ public class SmallerResourceHandler {
       path += "index.html";
     }
     final Map<String, Object> data = loadRequestConfiguration(path, request);
-    renderTemplate(out, request, response, path, data, liveReloadCode);
+    renderTemplate(out, response, path, data, liveReloadCode);
   }
 
   /**
    * @param out
-   * @param request
    * @param response
    * @param uri
    * @param data
@@ -330,9 +329,9 @@ public class SmallerResourceHandler {
    */
   @SuppressWarnings("unchecked")
   public void renderTemplate(final OutputStream out,
-      final HttpServletRequest request, final HttpServletResponse response,
-      final String uri, final Map<String, Object> data,
-      final String liveReloadCode) throws IOException {
+      final HttpServletResponse response, final String uri,
+      final Map<String, Object> data, final String liveReloadCode)
+      throws IOException {
     String path = uri;
     final PrintWriter writer = new PrintWriter(out);
     if (data.containsKey("jsonResponse")) {

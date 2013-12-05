@@ -1,8 +1,9 @@
 {
-  "opType=search": {
+  "": {
+    "proxy": "/de/de/damen/schuhe/winterstiefel-cinzia-in-grau/p/580000495-44796-115?opType=search",
     "templateData": {
       "name": "NEW-MENU",
-      "title": "NEU NEU: Winterstiefel Cinzia in Grau"
+      "title": "Ein ganz anderes Produkt"
     },
     "partials": {
       "#metanav": {
@@ -12,6 +13,10 @@
       "#sidebar h1[itemprop=name]": {
         "mode": "replace",
         "partial" : "/de/de/damen/schuhe/winterstiefel-cinzia-in-grau/p/name.hbs"
+      },
+      "img.media.js_detail": {
+        "mode": "replace",
+        "partial" : "/de/de/image.hbs"
       }
     }
   }

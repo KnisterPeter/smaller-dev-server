@@ -156,20 +156,34 @@ public class Servlet extends WebSocketServlet {
   private void handleProxyRequest(final OutputStream out,
       final HttpServletRequest request, final HttpServletResponse response,
       final String uri) throws IOException {
-    final String path = uri
-        + (request.getQueryString() != null ? "?" + request.getQueryString()
-            : "");
-    this.client.request(createClientRequest(request, path),
-        new HttpClient.ResponseHandler() {
-          @Override
-          public void handle(final StatusLine statusLine,
-              final Header[] headers, final HttpEntity entity,
-              final ContentType contentType, final Charset charset)
-              throws IOException {
-            handleResponse(out, statusLine, response, headers, entity,
-                contentType, request, uri);
-          }
-        });
+    HttpRequest clientRequest = null;
+
+    final Environment env = findEnvironmentByFile(uri);
+    if (env != null) {
+      final SmallerResourceHandler handler = this.resourceHandlers.get(env);
+      final Map<String, Object> data = handler.loadRequestConfiguration(uri,
+          request);
+      if (data.containsKey("proxy")) {
+        clientRequest = prepareClientRequest(new BasicHttpRequest("GET", data
+            .get("proxy").toString()), request);
+      }
+    }
+    if (clientRequest == null) {
+      clientRequest = createClientRequest(
+          request,
+          uri
+              + (request.getQueryString() != null ? "?"
+                  + request.getQueryString() : ""));
+    }
+    this.client.request(clientRequest, new HttpClient.ResponseHandler() {
+      @Override
+      public void handle(final StatusLine statusLine, final Header[] headers,
+          final HttpEntity entity, final ContentType contentType,
+          final Charset charset) throws IOException {
+        handleResponse(out, statusLine, response, headers, entity, contentType,
+            request, uri);
+      }
+    });
   }
 
   private HttpRequest createClientRequest(final HttpServletRequest request,
@@ -187,6 +201,11 @@ public class Servlet extends WebSocketServlet {
       clientRequest = new BasicHttpRequest(request.getMethod(), path);
     }
 
+    return prepareClientRequest(clientRequest, request);
+  }
+
+  private HttpRequest prepareClientRequest(final HttpRequest clientRequest,
+      final HttpServletRequest request) throws IOException {
     final List<String> skipHeaders = Arrays.asList("Host", "Connection",
         "Accept-Encoding");
     final Enumeration<String> names = request.getHeaderNames();
@@ -201,7 +220,6 @@ public class Servlet extends WebSocketServlet {
         }
       }
     }
-
     return clientRequest;
   }
 
@@ -271,8 +289,8 @@ public class Servlet extends WebSocketServlet {
               .getValue();
           for (final Element el : doc.select(partial.getKey())) {
             final ByteArrayOutputStream capture = new ByteArrayOutputStream();
-            handler.renderTemplate(capture, request, null,
-                partialConfig.get("partial"), data, null);
+            handler.renderTemplate(capture, null, partialConfig.get("partial"),
+                data, null);
             if ("appendChild".equals(partialConfig.get("mode"))) {
               el.append(capture.toString("UTF-8"));
             } else if ("prependChild".equals(partialConfig.get("mode"))) {

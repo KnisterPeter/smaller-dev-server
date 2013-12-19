@@ -258,7 +258,7 @@ public class Servlet extends WebSocketServlet {
         }
         if (this.configFile.getDevServer().isLiveReload()
             && contentType != null
-            && "text/html".equals(contentType.getMimeType())) {
+            && contentType.getMimeType().startsWith("text/html")) {
           LOGGER.debug("Injecting live-reload snippet");
           out.write(getLiveReloadClient().getBytes("UTF-8"));
         }

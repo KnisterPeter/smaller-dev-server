@@ -188,7 +188,7 @@ public class HttpClient {
 
   private HttpResponse executeRequest(final HttpRequest request,
       final DefaultHttpClientConnection conn, final BasicHttpContext context,
-      boolean withRetry) throws IOException {
+      final boolean withRetry) throws IOException {
     HttpResponse response = null;
     try {
       this.executor.preProcess(request, this.httpProcessor, context);
@@ -202,7 +202,12 @@ public class HttpClient {
       openConnection(this.targetHost, conn, request.getParams());
       return executeRequest(request, conn, context, false);
     } catch (final HttpException e) {
-      throw new IOException("Failed to execute http request", e);
+      if (!withRetry) {
+        throw new IOException("Failed to execute http request", e);
+      }
+      // Retry with reopened connection
+      openConnection(this.targetHost, conn, request.getParams());
+      return executeRequest(request, conn, context, false);
     }
     return response;
   }

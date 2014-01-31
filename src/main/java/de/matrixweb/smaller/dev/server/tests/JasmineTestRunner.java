@@ -45,7 +45,7 @@ public class JasmineTestRunner implements TestRunner {
       FileUtils.writeStringToFile(new File("/tmp/mod1.js"),
           VFSUtils.readToString(vfs.find("/mod1.js")));
 
-      final Map<String, String> options = new HashMap<>();
+      final Map<String, Object> options = new HashMap<>();
       final String resultFile = this.node.run(vfs, null, options);
       final long end = System.currentTimeMillis();
       handleResponse(VFSUtils.readToString(vfs.find('/' + resultFile)), start,

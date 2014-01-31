@@ -92,12 +92,7 @@
     <dependency>
       <groupId>de.matrixweb.smaller-config</groupId>
       <artifactId>smaller-config</artifactId>
-      <version>0.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>de.matrixweb.vfs</groupId>
-      <artifactId>vfs</artifactId>
-      <version>0.2.0</version>
+      <version>0.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>args4j</groupId>
@@ -129,11 +124,6 @@
           <groupId>org.mozilla</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>de.matrixweb.nodejs</groupId>
-      <artifactId>nodejs</artifactId>
-      <version>0.2.0</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.lanterna</groupId>

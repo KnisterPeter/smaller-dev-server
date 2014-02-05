@@ -16,9 +16,6 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Transformer;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
@@ -26,12 +23,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 
+import de.matrixweb.smaller.common.Manifest;
+import de.matrixweb.smaller.common.ProcessDescription;
 import de.matrixweb.smaller.common.SmallerException;
-import de.matrixweb.smaller.common.Task;
 import de.matrixweb.smaller.common.Version;
 import de.matrixweb.smaller.config.DevServer;
 import de.matrixweb.smaller.config.Environment;
-import de.matrixweb.smaller.config.Processor;
 import de.matrixweb.smaller.dev.server.templates.Engine;
 import de.matrixweb.smaller.dev.server.templates.TemplateEngine;
 import de.matrixweb.smaller.dev.server.tests.TestFramework;
@@ -69,7 +66,9 @@ public class SmallerResourceHandler {
 
   private ResourceResolver resolver;
 
-  private Task task;
+  private final Manifest manifest;
+
+  private ProcessDescription processDescription;
 
   private Pipeline pipeline;
 
@@ -86,13 +85,15 @@ public class SmallerResourceHandler {
   /**
    * @param devServer
    * @param env
+   * @param manifest
    * @throws IOException
    */
-  public SmallerResourceHandler(final DevServer devServer, final Environment env)
-      throws IOException {
+  public SmallerResourceHandler(final DevServer devServer,
+      final Environment env, final Manifest manifest) throws IOException {
     try {
       this.devServer = devServer;
       this.env = env;
+      this.manifest = manifest;
       this.vfs = new VFS();
       this.resourceWatchdog = new ResourceWatchdog(this, env);
       prepareVfs();
@@ -100,7 +101,7 @@ public class SmallerResourceHandler {
         this.processorFactory = new JavaEEProcessorFactory();
         this.resolver = new VFSResourceResolver(this.vfs);
         this.pipeline = new Pipeline(this.processorFactory);
-        setupTasks();
+        setupTasks(manifest);
       }
       this.templateEngine = Engine.get(env.getTemplateEngine())
           .create(this.vfs);
@@ -113,21 +114,16 @@ public class SmallerResourceHandler {
     }
   }
 
-  private void setupTasks() {
-    if (this.env.getPipeline() != null) {
-      final String processors = StringUtils.join(this.env.getPipeline(), ',');
-      final String inputFiles = StringUtils.join(CollectionUtils.collect(
-          this.env.getProcessors().values(), new Transformer() {
-            @Override
-            public Object transform(final Object input) {
-              return ((Processor) input).getSrc();
-            }
-          }), ',');
-      this.task = new Task(processors, inputFiles, StringUtils.join(
-          this.env.getProcess(), ','));
-      this.task
-          .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
+  private void setupTasks(final Manifest manifest) {
+    for (final ProcessDescription processDescription : manifest
+        .getProcessDescriptions()) {
+      if (processDescription.getOutputFile().equals(this.env.getProcess()[0])) {
+        this.processDescription = processDescription;
+      }
     }
+    // TODO: Patch source-maps opton and coffeescript-bare
+    // this.task
+    // .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
   }
 
   private final void prepareVfs() throws IOException {
@@ -208,19 +204,18 @@ public class SmallerResourceHandler {
 
   private void recompileTask(final List<String> changedResources,
       final PushInfo pushInfo) {
-    if (this.task != null) {
+    if (this.processDescription != null) {
       try {
         final long start = System.currentTimeMillis();
 
-        executeSmallerTask(changedResources, this.task);
+        executeSmaller(changedResources, this.processDescription);
 
-        for (final String out : this.task.getOut()) {
-          if (start < this.vfs.find(out).getLastModified()) {
-            if (out.endsWith(".js")) {
-              pushInfo.setJs(out);
-            } else if (out.endsWith(".css")) {
-              pushInfo.setCss(out);
-            }
+        final String out = this.processDescription.getOutputFile();
+        if (start < this.vfs.find(out).getLastModified()) {
+          if (out.endsWith(".js")) {
+            pushInfo.setJs(out);
+          } else if (out.endsWith(".css")) {
+            pushInfo.setCss(out);
           }
         }
       } catch (IOException | SmallerException e) {
@@ -234,16 +229,18 @@ public class SmallerResourceHandler {
     }
   }
 
-  private void executeSmallerTask(final List<String> changedResources,
-      final Task task) {
-    // TODO: Check if test-resources was changed
-    // => rebuild test resources
-    // => rerun tests
-    // otherwise:
-    // => rerun whole stack
-    this.pipeline.execute(Version.getCurrentVersion(), this.vfs, this.resolver,
-        task);
+  private void executeSmaller(final List<String> changedResources,
+      final ProcessDescription processDescription) throws IOException {
+    if (this.pipeline != null) {
+      this.pipeline.execute(Version.getCurrentVersion(), this.vfs,
+          this.resolver, this.manifest, processDescription);
 
+      // TODO: Add test run
+    }
+  }
+
+  @Deprecated
+  private void executeSmallerTask(final List<String> changedResources) {
     if (this.env.getTestFiles() != null) {
       final VFS testVfs = new VFS();
       try {

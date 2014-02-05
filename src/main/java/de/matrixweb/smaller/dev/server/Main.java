@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
+import de.matrixweb.smaller.clients.common.Util;
+import de.matrixweb.smaller.common.Manifest;
 import de.matrixweb.smaller.common.SmallerException;
 import de.matrixweb.smaller.config.ConfigFile;
 import de.matrixweb.smaller.config.DevServer;
@@ -72,10 +74,13 @@ public class Main {
       loggerContext.getLogger("de.matrixweb.smaller").setLevel(Level.INFO);
     }
 
+    final Manifest manifest = new Util(null)
+        .convertConfigFileToManifest(configFile);
+
     this.resourceHandlers = new HashMap<>();
     for (final Environment env : configFile.getEnvironments().values()) {
       this.resourceHandlers.put(env,
-          new SmallerResourceHandler(configFile.getDevServer(), env));
+          new SmallerResourceHandler(configFile.getDevServer(), env, manifest));
     }
 
     final Servlet servlet = new Servlet(configFile, this.resourceHandlers);

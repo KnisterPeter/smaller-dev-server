@@ -40,11 +40,19 @@
     <url>https://github.com/KnisterPeter/smaller-dev-server</url>
   </scm>
 
+  <properties>
+    <smaller.version>0.8.0-SNAPSHOT</smaller.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>de.matrixweb.smaller</groupId>
+      <artifactId>client-common</artifactId>
+      <version>${smaller.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>de.matrixweb.smaller</groupId>
       <artifactId>standalone</artifactId>
-      <version>0.8.0-SNAPSHOT</version>
+      <version>${smaller.version}</version>
       <exclusions>
         <exclusion>
           <artifactId>jetty-security</artifactId>

@@ -148,6 +148,7 @@ public class Main {
     return configFile;
   }
 
+  @Deprecated
   private Cmdline parseArgs(final String... args) {
     final Cmdline config = new Cmdline();
     final CmdLineParser parser = new CmdLineParser(config);

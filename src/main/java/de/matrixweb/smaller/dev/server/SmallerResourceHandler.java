@@ -17,10 +17,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 
 import de.matrixweb.smaller.common.Manifest;
@@ -117,13 +117,12 @@ public class SmallerResourceHandler {
   private void setupTasks(final Manifest manifest) {
     for (final ProcessDescription processDescription : manifest
         .getProcessDescriptions()) {
-      if (processDescription.getOutputFile().equals(this.env.getProcess()[0])) {
+      if (processDescription.getOutputFile() != null
+          && processDescription.getOutputFile()
+              .equals(this.env.getProcess()[0])) {
         this.processDescription = processDescription;
       }
     }
-    // TODO: Patch source-maps opton and coffeescript-bare
-    // this.task
-    // .setOptionsDefinition("global:source-maps=true;coffeeScript:bare=true");
   }
 
   private final void prepareVfs() throws IOException {

@@ -6,9 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.matrixweb.nodejs.NodeJsExecutor;
 import de.matrixweb.smaller.common.SmallerException;
@@ -34,8 +35,8 @@ public class JasmineTestRunner implements TestRunner {
     try {
       if (this.node == null) {
         this.node = new NodeJsExecutor();
-        this.node.setModule(getClass().getClassLoader(),
-            "minijasminenode-0.2.4", "tests/jasmine.js");
+        this.node.setModule(getClass(), "minijasminenode-0.2.4",
+            "tests/jasmine.js");
       }
       final long start = System.currentTimeMillis();
 

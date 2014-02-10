@@ -6,9 +6,7 @@ import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -24,7 +22,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import de.matrixweb.smaller.common.Manifest;
-import de.matrixweb.smaller.common.SmallerException;
 import de.matrixweb.smaller.config.ConfigFile;
 import de.matrixweb.smaller.config.DevServer;
 import de.matrixweb.smaller.config.Environment;
@@ -59,7 +56,7 @@ public class Main {
     if (config == null) {
       return;
     }
-    final ConfigFile configFile = parseConfigFile(args);
+    final ConfigFile configFile = parseConfigFile(config.getFile());
     updateConfigFileFromCmdLine(configFile, config);
 
     System.setProperty("logback.configurationFile", "logback-dev-server.xml");
@@ -126,20 +123,8 @@ public class Main {
     }
   }
 
-  private ConfigFile parseConfigFile(final String... args) throws IOException {
-    ConfigFile configFile = null;
-
-    final Iterator<String> it = Arrays.asList(args).iterator();
-    while (it.hasNext()) {
-      final String arg = it.next();
-      if (arg.startsWith("@")) {
-        if (configFile != null) {
-          throw new SmallerException("Found multiple config files");
-        }
-        configFile = ConfigFile.read(new File(arg.substring(1)));
-      }
-    }
-
+  private ConfigFile parseConfigFile(final File file) throws IOException {
+    ConfigFile configFile = ConfigFile.read(file);
     if (configFile == null) {
       configFile = new ConfigFile();
     }
@@ -154,9 +139,7 @@ public class Main {
     try {
       final List<String> params = new ArrayList<>();
       for (final String arg : args) {
-        if (!arg.startsWith("@")) {
-          params.add(arg);
-        }
+        params.add(arg);
       }
       parser.parseArgument(params);
       if (config.isHelp()) {

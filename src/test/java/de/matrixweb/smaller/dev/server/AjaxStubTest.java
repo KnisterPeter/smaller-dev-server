@@ -19,7 +19,7 @@ public class AjaxStubTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "@src/test/resources/test1/ajax.yml";
+    return "src/test/resources/test1/ajax.yml";
   }
 
   /**

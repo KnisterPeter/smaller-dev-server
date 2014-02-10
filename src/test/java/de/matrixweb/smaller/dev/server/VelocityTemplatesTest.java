@@ -19,7 +19,7 @@ public class VelocityTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "@src/test/resources/test1/vm.yml";
+    return "src/test/resources/test1/vm.yml";
   }
 
   /**

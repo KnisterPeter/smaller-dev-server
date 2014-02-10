@@ -1,5 +1,8 @@
 package de.matrixweb.smaller.dev.server;
 
+import java.io.File;
+
+import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 /**
@@ -30,6 +33,9 @@ public class Cmdline {
 
   @Option(name = "--force-full-reload", usage = "Flag to force always full reload on resource changes; Defaults to true for compatibility")
   private Boolean forceFullReload = true;
+
+  @Argument(usage = "The config file. If not given it defaults to smaller.yml in the current directory")
+  private File file;
 
   /**
    * @return the help
@@ -149,6 +155,16 @@ public class Cmdline {
    */
   public void setForceFullReload(final Boolean forceFullReload) {
     this.forceFullReload = forceFullReload;
+  }
+
+  /**
+   * @return the file
+   */
+  public File getFile() {
+    if (this.file == null) {
+      return new File("smaller.yml");
+    }
+    return this.file;
   }
 
 }

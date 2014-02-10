@@ -19,7 +19,7 @@ public class RawTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "@src/test/resources/test1/raw.yml";
+    return "src/test/resources/test1/raw.yml";
   }
 
   /**

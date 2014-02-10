@@ -19,7 +19,7 @@ public class HandlebarsTemplatesTest extends AbstractDevServerTest {
    */
   @Override
   protected String getServerArgs() {
-    return "@src/test/resources/test1/hbs.yml";
+    return "src/test/resources/test1/hbs.yml";
   }
 
   /**

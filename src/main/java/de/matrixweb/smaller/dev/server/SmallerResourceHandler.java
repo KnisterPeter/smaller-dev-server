@@ -46,7 +46,6 @@ import de.matrixweb.vfs.scanner.VFSResourceLister;
 import de.matrixweb.vfs.wrapped.JavaFile;
 import de.matrixweb.vfs.wrapped.MergingVFS;
 import de.matrixweb.vfs.wrapped.WrappedSystem;
-import de.matrixweb.vfs.wrapped.WrappedVFS;
 
 /**
  * @author markusw
@@ -57,8 +56,6 @@ public class SmallerResourceHandler {
       .getLogger(SmallerResourceHandler.class);
 
   private DevServer devServer;
-
-  private final Environment env;
 
   private ProcessorFactory processorFactory;
 
@@ -92,16 +89,15 @@ public class SmallerResourceHandler {
       final Environment env, final Manifest manifest) throws IOException {
     try {
       this.devServer = devServer;
-      this.env = env;
       this.manifest = manifest;
       this.vfs = new VFS();
       this.resourceWatchdog = new ResourceWatchdog(this, env);
-      prepareVfs();
+      prepareVfs(env);
       if (env.getProcess() != null) {
         this.processorFactory = new JavaEEProcessorFactory();
         this.resolver = new VFSResourceResolver(this.vfs);
         this.pipeline = new Pipeline(this.processorFactory);
-        setupTasks(manifest);
+        setupTasks(env, manifest);
       }
       this.templateEngine = Engine.get(env.getTemplateEngine())
           .create(this.vfs);
@@ -114,27 +110,26 @@ public class SmallerResourceHandler {
     }
   }
 
-  private void setupTasks(final Manifest manifest) {
+  private void setupTasks(final Environment env, final Manifest manifest) {
     for (final ProcessDescription processDescription : manifest
         .getProcessDescriptions()) {
       if (processDescription.getOutputFile() != null
-          && processDescription.getOutputFile()
-              .equals(this.env.getProcess()[0])) {
+          && processDescription.getOutputFile().equals(env.getProcess())) {
         this.processDescription = processDescription;
       }
     }
   }
 
-  private final void prepareVfs() throws IOException {
+  private final void prepareVfs(final Environment env) throws IOException {
     final List<WrappedSystem> mergedRoot = new ArrayList<>();
-    for (final String root : this.env.getFiles().getFolder()) {
+    for (final String root : env.getFiles().getFolder()) {
       LOGGER.debug("Added document-root: {}", root);
       mergedRoot.add(new JavaFile(new File(root)));
     }
     this.vfs.mount(this.vfs.find("/"), new MergingVFS(mergedRoot));
 
     this.resourceScanner = new ResourceScanner(new VFSResourceLister(this.vfs),
-        this.env.getFiles().getIncludes(), this.env.getFiles().getExcludes());
+        env.getFiles().getIncludes(), env.getFiles().getExcludes());
   }
 
   void smallerResources(final List<String> changedResources) {
@@ -235,28 +230,6 @@ public class SmallerResourceHandler {
           this.resolver, this.manifest, processDescription);
 
       // TODO: Add test run
-    }
-  }
-
-  @Deprecated
-  private void executeSmallerTask(final List<String> changedResources) {
-    if (this.env.getTestFiles() != null) {
-      final VFS testVfs = new VFS();
-      try {
-        final List<WrappedSystem> mounts = new ArrayList<>();
-        mounts.add(new WrappedVFS(this.vfs.find("/")));
-        for (final String folder : this.env.getTestFiles().getFolder()) {
-          mounts.add(new JavaFile(new File(folder)));
-        }
-        testVfs.mount(testVfs.find("/"),
-            new MergingVFS(mounts.toArray(new WrappedSystem[mounts.size()])));
-
-        this.testRunner.run(testVfs);
-      } catch (final IOException e) {
-        LOGGER.error("Failed to execute tests", e);
-      } finally {
-        testVfs.dispose();
-      }
     }
   }
 

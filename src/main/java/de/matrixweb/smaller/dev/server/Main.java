@@ -73,7 +73,8 @@ public class Main {
     final Manifest manifest = Manifest.fromConfigFile(configFile);
 
     this.resourceHandlers = new HashMap<>();
-    for (final Environment env : configFile.getEnvironments().values()) {
+    for (final String envName : configFile.getDevServer().getEnvironments()) {
+      final Environment env = configFile.getEnvironments().get(envName);
       this.resourceHandlers.put(env,
           new SmallerResourceHandler(configFile.getDevServer(), env, manifest));
     }

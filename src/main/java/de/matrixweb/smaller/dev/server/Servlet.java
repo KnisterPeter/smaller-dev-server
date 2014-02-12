@@ -20,7 +20,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -307,7 +306,7 @@ public class Servlet extends WebSocketServlet {
 
   private Environment findEnvironmentByUri(final String uri) {
     for (final Environment env : this.configFile.getEnvironments().values()) {
-      if (ArrayUtils.contains(env.getProcess(), uri)) {
+      if (uri.equals(env.getProcess())) {
         return env;
       }
     }

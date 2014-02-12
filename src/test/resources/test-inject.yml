@@ -4,10 +4,15 @@ dev-server:
     debug: false
     live-reload: true
     inject-partials: true
+    environments:
+    environments:
+      - "js"
+      - "css"
+      - "templates"
+      - "tests"
 environments:
     js:
-        process: 
-            - "/ignore/static/extensions/js/basic-min.js" 
+        process: "/ignore/static/extensions/js/basic-min.js" 
         files:
             folder:
                 - "../src/test/resources/fldr1"
@@ -25,8 +30,7 @@ environments:
             - coffeeScript
             - browserify
     css:
-        process: 
-            - "/ignore/static/extensions/css/joop-base64-min.css" 
+        process: "/ignore/static/extensions/css/joop-base64-min.css" 
         files:
             folder:
                 - "../src/test/resources/fldr1"

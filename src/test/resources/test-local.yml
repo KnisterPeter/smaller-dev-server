@@ -3,10 +3,14 @@ dev-server:
     proxyport: 3000 
     debug: true
     live-reload: true
+    environments:
+      - "js"
+      - "css"
+      - "templates"
+      - "tests"
 environments:
     js:
-        process:
-            - "/app.js"
+        process: "/app.js"
         files:
             folder:
                 - "../src/test/resources/fldr1"
@@ -24,8 +28,7 @@ environments:
             - coffeeScript
             - browserify
     css:
-        process:
-            - "/style.css"
+        process: "/style.css"
         files:
             folder:
                 - "../src/test/resources/fldr1"

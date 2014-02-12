@@ -1,6 +1,8 @@
 dev-server:
     proxyhost: localhost
     proxyport: 3000
+    environments:
+        - raw
 environments:
     raw:
         templates: raw

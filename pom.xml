@@ -41,7 +41,7 @@
   </scm>
 
   <properties>
-    <smaller.version>0.8.0-SNAPSHOT</smaller.version>
+    <smaller.version>0.8.0</smaller.version>
   </properties>
   <dependencies>
     <dependency>
@@ -175,7 +175,7 @@
       <plugin>
         <groupId>de.matrixweb.smaller</groupId>
         <artifactId>smaller-node-builder-maven-plugin</artifactId>
-        <version>1.0.8-SNAPSHOT</version>
+        <version>1.0.8</version>
         <configuration>
           <type>js</type>
           <npm-only>true</npm-only>

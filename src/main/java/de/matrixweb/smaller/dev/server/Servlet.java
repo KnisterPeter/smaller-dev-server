@@ -61,13 +61,11 @@ public class Servlet extends WebSocketServlet {
    * @param configFile
    * @param resourceHandlers
    */
-  public Servlet(final ConfigFile configFile,
-      final Map<Environment, SmallerResourceHandler> resourceHandlers) {
+  public Servlet(final ConfigFile configFile, final Map<Environment, SmallerResourceHandler> resourceHandlers) {
     this.configFile = configFile;
     this.resourceHandlers = resourceHandlers;
-    this.client = new HttpClient(new HttpHost(configFile.getDevServer()
-        .getProxyhost(), configFile.getDevServer().getProxyport()), configFile
-        .getDevServer().getPort());
+    this.client = new HttpClient(new HttpHost(configFile.getDevServer().getProxyhost(), configFile.getDevServer()
+        .getProxyport()), configFile.getDevServer().getPort());
     LiveReloadSocket.start();
   }
 
@@ -76,8 +74,7 @@ public class Servlet extends WebSocketServlet {
    *      java.lang.String)
    */
   @Override
-  public WebSocket doWebSocketConnect(final HttpServletRequest request,
-      final String protocol) {
+  public WebSocket doWebSocketConnect(final HttpServletRequest request, final String protocol) {
     if ("live-reload".equals(protocol)) {
       return LiveReloadSocket.create();
     }
@@ -89,8 +86,8 @@ public class Servlet extends WebSocketServlet {
    *      javax.servlet.http.HttpServletResponse)
    */
   @Override
-  protected void doGet(final HttpServletRequest request,
-      final HttpServletResponse response) throws ServletException, IOException {
+  protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws ServletException,
+      IOException {
     handleHttpRequest(request, response);
   }
 
@@ -99,19 +96,23 @@ public class Servlet extends WebSocketServlet {
    *      javax.servlet.http.HttpServletResponse)
    */
   @Override
-  protected void doPost(final HttpServletRequest request,
-      final HttpServletResponse response) throws ServletException, IOException {
+  protected void doPost(final HttpServletRequest request, final HttpServletResponse response) throws ServletException,
+      IOException {
     handleHttpRequest(request, response);
   }
 
-  private void handleHttpRequest(final HttpServletRequest request,
-      final HttpServletResponse response) throws IOException {
+  private void handleHttpRequest(final HttpServletRequest request, final HttpServletResponse response)
+      throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
       final String uri = request.getRequestURI();
       LOGGER.debug("Requested uri: {}", uri);
       final Environment env = findEnvironmentByUri(uri);
       if (env != null) {
+        LOGGER.info("\n\n");
+        LOGGER.info(env.getProcess());
+        LOGGER.info("" + this.resourceHandlers.get(env));
+        LOGGER.info("\n\n");
         this.resourceHandlers.get(env).process(baos, response, uri);
       } else {
         try {
@@ -137,14 +138,12 @@ public class Servlet extends WebSocketServlet {
     }
   }
 
-  private void tryTemplateRendering(final OutputStream out,
-      final HttpServletRequest request, final HttpServletResponse response,
-      final String uri) throws IOException {
+  private void tryTemplateRendering(final OutputStream out, final HttpServletRequest request,
+      final HttpServletResponse response, final String uri) throws IOException {
     try {
       final Environment env = findEnvironmentByFile(uri);
       if (env != null) {
-        this.resourceHandlers.get(env).renderTemplate(out, request, response,
-            uri, getLiveReloadClient());
+        this.resourceHandlers.get(env).renderTemplate(out, request, response, uri, getLiveReloadClient());
       }
     } catch (final IOException e) {
       LOGGER.error("Failed to render template", e);
@@ -152,49 +151,38 @@ public class Servlet extends WebSocketServlet {
     }
   }
 
-  private void handleProxyRequest(final OutputStream out,
-      final HttpServletRequest request, final HttpServletResponse response,
-      final String uri) throws IOException {
+  private void handleProxyRequest(final OutputStream out, final HttpServletRequest request,
+      final HttpServletResponse response, final String uri) throws IOException {
     HttpRequest clientRequest = null;
 
     final Environment env = findEnvironmentByFile(uri);
     if (env != null) {
       final SmallerResourceHandler handler = this.resourceHandlers.get(env);
-      final Map<String, Object> data = handler.loadRequestConfiguration(uri,
-          request);
+      final Map<String, Object> data = handler.loadRequestConfiguration(uri, request);
       if (data.containsKey("proxy")) {
-        clientRequest = prepareClientRequest(new BasicHttpRequest("GET", data
-            .get("proxy").toString()), request);
+        clientRequest = prepareClientRequest(new BasicHttpRequest("GET", data.get("proxy").toString()), request);
       }
     }
     if (clientRequest == null) {
-      clientRequest = createClientRequest(
-          request,
-          uri
-              + (request.getQueryString() != null ? "?"
-                  + request.getQueryString() : ""));
+      clientRequest = createClientRequest(request,
+          uri + (request.getQueryString() != null ? "?" + request.getQueryString() : ""));
     }
     this.client.request(clientRequest, new HttpClient.ResponseHandler() {
       @Override
-      public void handle(final StatusLine statusLine, final Header[] headers,
-          final HttpEntity entity, final ContentType contentType,
-          final Charset charset) throws IOException {
-        handleResponse(out, statusLine, response, headers, entity, contentType,
-            request, uri);
+      public void handle(final StatusLine statusLine, final Header[] headers, final HttpEntity entity,
+          final ContentType contentType, final Charset charset) throws IOException {
+        handleResponse(out, statusLine, response, headers, entity, contentType, request, uri);
       }
     });
   }
 
-  private HttpRequest createClientRequest(final HttpServletRequest request,
-      final String path) throws IOException {
+  private HttpRequest createClientRequest(final HttpServletRequest request, final String path) throws IOException {
     HttpRequest clientRequest = null;
 
     if ("POST".equalsIgnoreCase(request.getMethod())) {
-      final BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest(
-          "POST", path);
-      entityRequest.setEntity(new InputStreamEntity(request.getInputStream(),
-          request.getContentLength(), ContentType.parse(request
-              .getContentType())));
+      final BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest("POST", path);
+      entityRequest.setEntity(new InputStreamEntity(request.getInputStream(), request.getContentLength(), ContentType
+          .parse(request.getContentType())));
       clientRequest = entityRequest;
     } else {
       clientRequest = new BasicHttpRequest(request.getMethod(), path);
@@ -203,10 +191,9 @@ public class Servlet extends WebSocketServlet {
     return prepareClientRequest(clientRequest, request);
   }
 
-  private HttpRequest prepareClientRequest(final HttpRequest clientRequest,
-      final HttpServletRequest request) throws IOException {
-    final List<String> skipHeaders = Arrays.asList("Host", "Connection",
-        "Accept-Encoding");
+  private HttpRequest prepareClientRequest(final HttpRequest clientRequest, final HttpServletRequest request)
+      throws IOException {
+    final List<String> skipHeaders = Arrays.asList("Host", "Connection", "Accept-Encoding");
     final Enumeration<String> names = request.getHeaderNames();
     while (names.hasMoreElements()) {
       final String name = names.nextElement();
@@ -222,10 +209,8 @@ public class Servlet extends WebSocketServlet {
     return clientRequest;
   }
 
-  private void handleResponse(final OutputStream out,
-      final StatusLine statusLine, final HttpServletResponse response,
-      final Header[] headers, final HttpEntity entity,
-      final ContentType contentType, final HttpServletRequest request,
+  private void handleResponse(final OutputStream out, final StatusLine statusLine, final HttpServletResponse response,
+      final Header[] headers, final HttpEntity entity, final ContentType contentType, final HttpServletRequest request,
       final String uri) throws IOException {
     // TODO: Make this configurable?
     if (statusLine.getStatusCode() == 404) {
@@ -233,20 +218,17 @@ public class Servlet extends WebSocketServlet {
     }
     response.setStatus(statusLine.getStatusCode());
 
-    final List<String> skipHeaders = Arrays.asList("Connection",
-        "Content-Length");
+    final List<String> skipHeaders = Arrays.asList("Connection", "Content-Length");
     for (final Header header : headers) {
       if (!skipHeaders.contains(header.getName())) {
-        LOGGER.debug("Add response header: " + header.getName() + ":"
-            + header.getValue());
+        LOGGER.debug("Add response header: " + header.getName() + ":" + header.getValue());
         response.addHeader(header.getName(), header.getValue());
       }
     }
 
     if (entity != null) {
       try (InputStream in = entity.getContent()) {
-        if (this.configFile.getDevServer().isInjectPartials()
-            && contentType != null
+        if (this.configFile.getDevServer().isInjectPartials() && contentType != null
             && "text/html".equals(contentType.getMimeType())) {
           final Document doc = Jsoup.parse(IOUtils.toString(in));
           injectPartials(doc, uri, request);
@@ -255,8 +237,7 @@ public class Servlet extends WebSocketServlet {
           LOGGER.debug("Send proxy response");
           IOUtils.copy(in, out);
         }
-        if (this.configFile.getDevServer().isLiveReload()
-            && contentType != null
+        if (this.configFile.getDevServer().isLiveReload() && contentType != null
             && contentType.getMimeType().startsWith("text/html")) {
           LOGGER.debug("Injecting live-reload snippet");
           out.write(getLiveReloadClient().getBytes("UTF-8"));
@@ -266,8 +247,7 @@ public class Servlet extends WebSocketServlet {
   }
 
   @SuppressWarnings("unchecked")
-  private void injectPartials(final Document doc, String uri,
-      final HttpServletRequest request) throws IOException,
+  private void injectPartials(final Document doc, String uri, final HttpServletRequest request) throws IOException,
       UnsupportedEncodingException {
     if (uri.endsWith("/")) {
       uri += "index.html";
@@ -278,25 +258,20 @@ public class Servlet extends WebSocketServlet {
     if (env != null) {
       final SmallerResourceHandler handler = this.resourceHandlers.get(env);
 
-      final Map<String, Object> data = handler.loadRequestConfiguration(uri,
-          request);
+      final Map<String, Object> data = handler.loadRequestConfiguration(uri, request);
       if (data.containsKey("partials")) {
-        final Map<String, Object> partials = (Map<String, Object>) data
-            .get("partials");
+        final Map<String, Object> partials = (Map<String, Object>) data.get("partials");
         for (final Entry<String, Object> partial : partials.entrySet()) {
-          final Map<String, String> partialConfig = (Map<String, String>) partial
-              .getValue();
+          final Map<String, String> partialConfig = (Map<String, String>) partial.getValue();
           for (final Element el : doc.select(partial.getKey())) {
             final ByteArrayOutputStream capture = new ByteArrayOutputStream();
-            handler.renderTemplate(capture, null, partialConfig.get("partial"),
-                data, null);
+            handler.renderTemplate(capture, null, partialConfig.get("partial"), data, null);
             if ("appendChild".equals(partialConfig.get("mode"))) {
               el.append(capture.toString("UTF-8"));
             } else if ("prependChild".equals(partialConfig.get("mode"))) {
               el.prepend(capture.toString("UTF-8"));
             } else if ("replace".equals(partialConfig.get("mode"))) {
-              el.replaceWith(Jsoup.parseBodyFragment(capture.toString("UTF-8"))
-                  .select("body *").first());
+              el.replaceWith(Jsoup.parseBodyFragment(capture.toString("UTF-8")).select("body *").first());
             }
           }
         }
@@ -305,7 +280,8 @@ public class Servlet extends WebSocketServlet {
   }
 
   private Environment findEnvironmentByUri(final String uri) {
-    for (final Environment env : this.configFile.getEnvironments().values()) {
+    for (String envName : this.configFile.getDevServer().getEnvironments()) {
+      final Environment env = this.configFile.getEnvironments().get(envName);
       if (uri.equals(env.getProcess())) {
         return env;
       }
@@ -314,11 +290,10 @@ public class Servlet extends WebSocketServlet {
   }
 
   private Environment findEnvironmentByFile(final String file) {
-    for (final Entry<Environment, SmallerResourceHandler> entry : this.resourceHandlers
-        .entrySet()) {
+    for (final Entry<Environment, SmallerResourceHandler> entry : this.resourceHandlers.entrySet()) {
       final SmallerResourceHandler resourceHandler = entry.getValue();
-      if (resourceHandler.hasFile(resourceHandler.getTemplateEngine()
-          .getTemplateUri(file)) || resourceHandler.hasFile(file + ".cfg.json")) {
+      if (resourceHandler.hasFile(resourceHandler.getTemplateEngine().getTemplateUri(file))
+          || resourceHandler.hasFile(file + ".cfg.json")) {
         return entry.getKey();
       }
     }
@@ -330,8 +305,7 @@ public class Servlet extends WebSocketServlet {
    * @throws IOException
    */
   public String getLiveReloadClient() throws IOException {
-    if (this.liveReloadClient == null
-        || this.configFile.getDevServer().isDebug()) {
+    if (this.liveReloadClient == null || this.configFile.getDevServer().isDebug()) {
       final StringBuilder sb = new StringBuilder();
       sb.append("<script text=\"javascript\">");
       final InputStream in = getClass().getResourceAsStream("/live-reload.js");

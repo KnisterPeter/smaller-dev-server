@@ -165,7 +165,7 @@ public class Servlet extends WebSocketServlet {
       final ByteArrayOutputStream baos) throws IOException {
     if (this.staticVfs != null) {
       final VFile file = this.staticVfs.find(uri);
-      if (file.exists()) {
+      if (file.exists() && !file.isDirectory()) {
         final InputStream in = file.getInputStream();
         try {
           IOUtils.copy(in, baos);

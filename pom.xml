@@ -40,7 +40,7 @@
   </scm>
 
   <properties>
-    <smaller.version>0.8.0</smaller.version>
+    <smaller.version>0.9.0-SNAPSHOT</smaller.version>
   </properties>
   <dependencies>
     <dependency>

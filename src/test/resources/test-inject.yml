@@ -4,7 +4,9 @@ dev-server:
     debug: false
     live-reload: true
     inject-partials: true
-    environments:
+    static-files:
+      folder:
+        - "../src/test/resources/static"
     environments:
       - "js"
       - "css"

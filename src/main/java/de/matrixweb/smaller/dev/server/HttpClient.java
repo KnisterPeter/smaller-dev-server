@@ -86,8 +86,8 @@ public class HttpClient {
     this.localport = localport;
     this.socketFactory = SocketFactory.getDefault();
 
-    this.rewritePattern = Pattern.compile("^(http.://)"
-        + targetHost.getHostName() + "(.*)$");
+    this.rewritePattern = Pattern.compile("^(http.?://)"
+        + targetHost.getHostName() + "(?::" + targetHost.getPort() + ")?(.*)$");
 
     this.httpProcessor = new BasicHttpProcessor();
     // Required request interceptors

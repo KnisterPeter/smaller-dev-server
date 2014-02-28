@@ -17,6 +17,9 @@
         node.innerHTML = msgs.join('');
         var body = document.querySelector('body');
         body.insertBefore(node, body.childNodes[0]);
+        window.setTimeout(function() {
+          node.parentNode.removeChild(node);
+        }, 3000);
       } else if (message.data.fullReload) {
         location.reload();
       } else {

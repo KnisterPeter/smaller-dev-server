@@ -319,7 +319,7 @@ public class Servlet extends WebSocketServlet {
   private Environment findEnvironmentByUri(final String uri) {
     for (final String envName : this.configFile.getDevServer().getEnvironments()) {
       final Environment env = this.configFile.getEnvironments().get(envName);
-      if (uri.matches(env.getProcess())) {
+      if (env.getProcess() != null && uri.matches(env.getProcess())) {
         return env;
       }
     }

@@ -241,7 +241,7 @@ public class SmallerResourceHandler {
    */
   public void process(final OutputStream out,
       final HttpServletResponse response, final String uri) throws IOException {
-    LOGGER.debug("Reply with smaller-resource at '{}'", uri);
+    LOGGER.info("Reply with smaller-resource at '{}'", uri);
     if (uri.endsWith("js")) {
       response.setContentType("application/javascript");
     } else if (uri.endsWith("css")) {

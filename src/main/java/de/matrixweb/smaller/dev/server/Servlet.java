@@ -28,9 +28,9 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
@@ -132,7 +132,7 @@ public class Servlet extends WebSocketServlet {
       if (!deliveredStaticFile) {
         final Environment env = findEnvironmentByUri(uri);
         if (env != null) {
-          this.resourceHandlers.get(env).process(baos, response, uri);
+          this.resourceHandlers.get(env).process(baos, response, env.getProcess());
         } else {
           try {
             handleProxyRequest(baos, request, response, uri);
@@ -218,7 +218,7 @@ public class Servlet extends WebSocketServlet {
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
       IOUtils.copy(request.getInputStream(), baos);
       final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-      final BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest("POST", path);
+      HttpPost entityRequest = new HttpPost(path);
       entityRequest.setEntity(new InputStreamEntity(bais, baos.size(), ContentType.parse(request.getContentType())));
       clientRequest = entityRequest;
     } else {
@@ -319,7 +319,7 @@ public class Servlet extends WebSocketServlet {
   private Environment findEnvironmentByUri(final String uri) {
     for (final String envName : this.configFile.getDevServer().getEnvironments()) {
       final Environment env = this.configFile.getEnvironments().get(envName);
-      if (uri.equals(env.getProcess())) {
+      if (uri.matches(env.getProcess())) {
         return env;
       }
     }

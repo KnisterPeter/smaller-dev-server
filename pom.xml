@@ -41,7 +41,7 @@
   </scm>
 
   <properties>
-    <smaller.version>0.8.3</smaller.version>
+    <smaller.version>0.8.8</smaller.version>
   </properties>
   <dependencies>
     <dependency>

@@ -32,7 +32,7 @@ environments:
             - coffeeScript
             - browserify
     css:
-        process: "/ignore/static/extensions/css/joop-base64-min.css" 
+        process: "/ignore/static/[^/]+/css/joop-base64-min.css" 
         files:
             folder:
                 - "../src/test/resources/fldr1"

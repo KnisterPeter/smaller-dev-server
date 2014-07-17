@@ -34,7 +34,18 @@
         }
         if (message.data.css) {
           var node = document.querySelector('link[href^="' + message.data.css + '"]');
-          node && node.setAttribute('href', node.getAttribute('href'));
+          if (node) {
+            node.setAttribute('href', node.getAttribute('href'));
+          } else {
+            var regexp = new RegExp(message.data.css);
+            var nodes = document.querySelectorAll('link[href][type="text/css"]');
+            for (var i = 0, n = nodes.length; i < n; i++) {
+              node = nodes[i];
+              if (node.getAttribute('href').match(regexp) !== null) {
+                node.setAttribute('href', node.getAttribute('href'));
+              }
+            }
+          }
         }
       }
     } else if (message.kind === 'ping') {
